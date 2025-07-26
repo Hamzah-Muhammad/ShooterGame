@@ -10,11 +10,12 @@ respawn_delay = 3
 class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 0, 0), is_local=False, **kwargs):
         super().__init__(
-            model='cube',
+            model='assets/soldier.obj',
             color=team_color,
-            scale=(1, 2, 1),
+            scale=1.2,
             position=spawn_point,
-            collider='box'
+            collider='box',
+            **kwargs
         )
         self.speed = 5
         self.is_local = is_local
@@ -40,7 +41,7 @@ class Player(Entity):
                 position=(0, 0)
             )
 
-            # Placeholder AK-47-style gun
+            # Gun model
             self.gun = Entity(
                 model='cube',
                 scale=(0.1, 0.1, 1),
@@ -50,7 +51,7 @@ class Player(Entity):
                 rotation=(0, 0, 0)
             )
 
-            # Health bar UI
+            # Health bar
             self.health_bar = Entity(
                 parent=camera.ui,
                 model='quad',
@@ -77,17 +78,29 @@ class Player(Entity):
                 self.health_bar.scale_x = max(0.001, self.health / 100)
 
     def move(self):
-        move_dir = Vec3(
+        if not self.is_local:
+            return
+
+        move_input = Vec3(
             held_keys['d'] - held_keys['a'],
             0,
             held_keys['w'] - held_keys['s']
-        ).normalized() * time.dt * self.speed
+        )
 
-        self.position += self.forward * move_dir.z + self.right * move_dir.x
+        if move_input != Vec3(0, 0, 0):
+            move_input = move_input.normalized()
 
-        if move_dir.length() > 0:
-            angle = atan2(move_dir.x, move_dir.z) * (180 / pi)
-            self.rotation_y = lerp(self.rotation_y, angle, 6 * time.dt)
+            # Camera-relative movement
+            move_direction = Vec3(
+                move_input.x * camera.right.x + move_input.z * camera.forward.x,
+                0,
+                move_input.x * camera.right.z + move_input.z * camera.forward.z
+            ).normalized()
+
+            self.position += move_direction * self.speed * time.dt
+
+            angle = atan2(move_direction.x, move_direction.z) * (180 / pi)
+            self.rotation_y = lerp(self.rotation_y, angle, 10 * time.dt)
 
     def shoot(self):
         if not hasattr(self, '_shoot_cooldown') or time.time() - self._shoot_cooldown > 0.1:

@@ -1,24 +1,47 @@
 from ursina import *
 from player import Player
-from team import Team
 
 app = Ursina()
 
-# Ground and sky
-Entity(model='plane', texture='white_cube', scale=(50, 1, 50), collider='box', texture_scale=(50, 50))
-Sky()
+window.color = color.rgb(180, 220, 255)
+window.title = "5v5 Third-Person Shooter"
 
-# Local player (you)
-my_player = Player(team_color=color.red, spawn_point=(-10, 0, 10), is_local=True)
+camera.fov = 90
+camera.clip_plane_near = 0.1
 
-# Teams
-team_red = Team('Red', color.red, spawn_area=(-10, 0, 10))
-team_blue = Team('Blue', color.blue, spawn_area=(10, 0, -10))
+# Create a large flat map
+ground = Entity(
+    model='plane',
+    scale=(100, 1, 100),
+    texture='white_cube',
+    texture_scale=(100, 100),
+    color=color.green,
+    collider='box'
+)
 
-# Add teammates and enemies
-for _ in range(4):
-    team_red.add_player()
-for _ in range(5):
-    team_blue.add_player()
+# Field border walls
+walls = [
+    Entity(model='cube', scale=(1, 10, 100), position=(-50, 5, 0), color=color.gray, collider='box'),
+    Entity(model='cube', scale=(1, 10, 100), position=(50, 5, 0), color=color.gray, collider='box'),
+    Entity(model='cube', scale=(100, 10, 1), position=(0, 5, -50), color=color.gray, collider='box'),
+    Entity(model='cube', scale=(100, 10, 1), position=(0, 5, 50), color=color.gray, collider='box')
+]
+
+# Spawn 5 local team players (you can control the first one)
+local_player = Player(team_color=color.azure, spawn_point=(-20, 0, -30), is_local=True)
+
+# Spawn additional allies (AI/placeholder)
+team_players = [local_player]
+for i in range(1, 5):
+    team_players.append(
+        Player(team_color=color.azure, spawn_point=(-20 + i * 10, 0, -30))
+    )
+
+# Spawn 5 enemies
+enemies = []
+for i in range(5):
+    enemies.append(
+        Player(team_color=color.red, spawn_point=(-20 + i * 10, 0, 30))
+    )
 
 app.run()
