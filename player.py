@@ -8,7 +8,7 @@ from constants import BULLET_SPEED, BULLET_LIFETIME, AMMO_CAPACITY, RELOAD_TIME
 class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 0, 0), is_local=False, **kwargs):
         super().__init__(
-            model='assets/soldier.obj',
+            model='assets/roblox_character.obj',
             color=team_color,
             scale=1,
             position=spawn_point,
