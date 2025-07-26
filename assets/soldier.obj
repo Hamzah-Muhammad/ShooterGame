@@ -1,0 +1,7 @@
+# Soldier placeholder model
+# This is a simple triangle placeholder for the character model.
+o Soldier
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 0.0 1.0 0.0
+f 1 2 3
