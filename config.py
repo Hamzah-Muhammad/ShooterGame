@@ -1,0 +1,2 @@
+TEAM_SIZE = 5
+MAP_SIZE = 50
