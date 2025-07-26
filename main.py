@@ -1,47 +1,44 @@
 from ursina import *
 from player import Player
+from teams import TeamManager
+from scoreboard import Scoreboard
+from map import create_map
+from constants import SPAWN_POINTS
 
 app = Ursina()
+create_map()
 
-window.color = color.rgb(180, 220, 255)
-window.title = "5v5 Third-Person Shooter"
+team_mgr = TeamManager()
+scoreboard = Scoreboard()
+players = []
 
-camera.fov = 90
-camera.clip_plane_near = 0.1
+def spawn_teams():
+    for i in range(5):
+        is_player = (i == 0)  # Only first blue is the local player
 
-# Create a large flat map
-ground = Entity(
-    model='plane',
-    scale=(100, 1, 100),
-    texture='white_cube',
-    texture_scale=(100, 100),
-    color=color.green,
-    collider='box'
-)
+        blue = Player(
+            team_color=color.azure,
+            spawn_point=SPAWN_POINTS['blue'][i],
+            is_local=is_player
+        )
+        red = Player(
+            team_color=color.red,
+            spawn_point=SPAWN_POINTS['red'][i],
+            is_local=False
+        )
 
-# Field border walls
-walls = [
-    Entity(model='cube', scale=(1, 10, 100), position=(-50, 5, 0), color=color.gray, collider='box'),
-    Entity(model='cube', scale=(1, 10, 100), position=(50, 5, 0), color=color.gray, collider='box'),
-    Entity(model='cube', scale=(100, 10, 1), position=(0, 5, -50), color=color.gray, collider='box'),
-    Entity(model='cube', scale=(100, 10, 1), position=(0, 5, 50), color=color.gray, collider='box')
-]
+        team_mgr.assign_team(blue, 'blue')
+        team_mgr.assign_team(red, 'red')
 
-# Spawn 5 local team players (you can control the first one)
-local_player = Player(team_color=color.azure, spawn_point=(-20, 0, -30), is_local=True)
+        blue.scoreboard = scoreboard
+        red.scoreboard = scoreboard
 
-# Spawn additional allies (AI/placeholder)
-team_players = [local_player]
-for i in range(1, 5):
-    team_players.append(
-        Player(team_color=color.azure, spawn_point=(-20 + i * 10, 0, -30))
-    )
+        players.append(blue)
+        players.append(red)
 
-# Spawn 5 enemies
-enemies = []
-for i in range(5):
-    enemies.append(
-        Player(team_color=color.red, spawn_point=(-20 + i * 10, 0, 30))
-    )
+def update():
+    for p in players:
+        p.update()
 
+spawn_teams()
 app.run()
