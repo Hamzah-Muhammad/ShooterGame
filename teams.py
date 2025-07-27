@@ -15,6 +15,7 @@ class TeamManager:
     def __init__(self):
         self.blue_team = Team('blue', TEAM_COLORS['blue'], SPAWN_POINTS['blue'], BLUE_NAMES)
         self.red_team = Team('red', TEAM_COLORS['red'], SPAWN_POINTS['red'], RED_NAMES)
+        self.game_mode = None
 
     def spawn_teams(self):
         for i in range(5):
@@ -39,6 +40,12 @@ class TeamManager:
     @property
     def all_players(self):
         return self.blue_team.players + self.red_team.players
+
+    # Called by players when they die so the active
+    # game mode can react (e.g. end the round).
+    def on_player_death(self, player):
+        if self.game_mode and hasattr(self.game_mode, 'player_died'):
+            self.game_mode.player_died(player)
 
 
 # Singleton instance

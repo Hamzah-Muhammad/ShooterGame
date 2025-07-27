@@ -26,5 +26,10 @@ class Scoreboard(Entity):
     def update_score(self):
         blue_kills = sum([p.kills for p in self.team_manager.blue_team.players])
         red_kills = sum([p.kills for p in self.team_manager.red_team.players])
-        self.blue_text.text = f'Blue: {blue_kills}'
-        self.red_text.text = f'Red: {red_kills}'
+
+        rounds = {"blue": 0, "red": 0}
+        if hasattr(self.team_manager, "game_mode") and self.team_manager.game_mode:
+            rounds = self.team_manager.game_mode.round_wins
+
+        self.blue_text.text = f'Blue: {blue_kills} (R {rounds["blue"]})'
+        self.red_text.text = f'Red: {red_kills} (R {rounds["red"]})'

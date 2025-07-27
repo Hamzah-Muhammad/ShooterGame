@@ -2,7 +2,9 @@ from ursina import color
 
 # General game settings
 PLAYER_SCALE = 1.5
-MAP_SIZE = 50
+# Size of the square map.  This is used for ground generation
+# and to position spawn points near the edges.
+MAP_SIZE = 100
 SCORE_LIMIT = 10
 GAME_RUNNING = True
 JUMP_HEIGHT = 5
@@ -27,11 +29,15 @@ TEAM_COLORS = {
     'red': color.red,
 }
 
-# Spawn points for blue and red teams (within the 50x50 map bounds)
-# Use the positions originally defined in ``constants.py``
+# Spawn points for blue and red teams. They are spread along the
+# X axis near the opposite edges of the map.
+SPAWN_SPACING = MAP_SIZE // 5
+SPAWN_OFFSET = -MAP_SIZE // 2 + SPAWN_SPACING // 2
+SPAWN_Z_OFFSET = MAP_SIZE // 2 - SPAWN_SPACING // 2
+
 SPAWN_POINTS = {
-    'blue': [(-15 + i * 10, 1, -15) for i in range(5)],
-    'red':  [(-15 + i * 10, 1,  15) for i in range(5)]
+    'blue': [(SPAWN_OFFSET + i * SPAWN_SPACING, 1, -SPAWN_Z_OFFSET) for i in range(5)],
+    'red':  [(SPAWN_OFFSET + i * SPAWN_SPACING, 1,  SPAWN_Z_OFFSET) for i in range(5)]
 }
 
 # Additional game constants

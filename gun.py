@@ -1,5 +1,6 @@
 from ursina import *
 from config import BULLET_SPEED, BULLET_LIFETIME, BULLET_DAMAGE
+from map import OBSTACLES
 
 class Gun(Entity):
     def __init__(self, player, **kwargs):
@@ -46,6 +47,13 @@ class Gun(Entity):
             destroy(self.bullet)
             self.bullet = None
             return
+
+        # Check hit against map obstacles
+        for obstacle in OBSTACLES:
+            if self.bullet.intersects(obstacle).hit:
+                destroy(self.bullet)
+                self.bullet = None
+                return
 
         # Check hit against each opposing player's hitbox
         for player in self.player.team_manager.get_opposing_players(self.player.team_color):

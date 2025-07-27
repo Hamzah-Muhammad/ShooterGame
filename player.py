@@ -139,7 +139,11 @@ class Player(Entity):
         self.visible = False
         self.collider = None
         self.hitbox.enabled = False
-        invoke(self.respawn, delay=3)
+
+        # Notify the team manager so the active game mode
+        # can react to the death (e.g. end the round).
+        if self.team_manager and hasattr(self.team_manager, 'on_player_death'):
+            self.team_manager.on_player_death(self)
 
     def respawn(self):
         self.position = Vec3(self.spawn_point[0], 1, self.spawn_point[2])
