@@ -9,9 +9,9 @@ def create_map():
     ground = Entity(
         model='plane',
         scale=(MAP_SIZE, 1, MAP_SIZE),
-        texture='white_cube',
+        texture='grass',
         texture_scale=(MAP_SIZE, MAP_SIZE),
-        color=color.light_gray,
+        color=color.green,
         collider='box'
     )
 
@@ -61,7 +61,7 @@ def create_map():
             model='cube',
             scale=(size_x, random.uniform(2, 4), size_z),
             position=(pos_x, 1, pos_z),
-            color=color.dark_gray,
+            color=color.rgb(139, 69, 19),
             collider='box'
         )
 
