@@ -5,6 +5,8 @@ PLAYER_SCALE = 1.5
 MAP_SIZE = 50
 SCORE_LIMIT = 10
 GAME_RUNNING = True
+JUMP_HEIGHT = 5
+MAX_HEALTH = 100
 
 # Player settings
 PLAYER_SPEED = 5
@@ -12,6 +14,7 @@ SPRINT_SPEED = 8
 CROUCH_HEIGHT = 0.5
 RELOAD_TIME = 1.5
 AMMO_CAPACITY = 10
+PLAYER_JUMP_HEIGHT = 2.5    # Adjust as needed for your game
 
 # Bullet settings
 BULLET_SPEED = 20
@@ -32,3 +35,6 @@ SPAWN_POINTS = {
 
 # Additional game constants
 MAX_SCORE = 20
+
+BLUE_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']
+RED_NAMES = ['Viper', 'Cobra', 'Falcon', 'Ghost', 'Reaper']

@@ -1,56 +1,60 @@
 from ursina import *
-from config import PLAYER_SCALE
 from gun import Gun
+from config import PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT
 
 class Player(Entity):
-    def __init__(self, team_color, spawn_point, is_local=False, name="Player", team_manager=None, **kwargs):
+    def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
         super().__init__(
-            model='assets/soldier.obj',
-            scale=PLAYER_SCALE,
+            model='soldier.obj',
+            scale=PLAYER_SCALE if PLAYER_SCALE != Vec3(0,0,0) else Vec3(1,1,1),
             color=team_color,
             position=spawn_point,
-            collider='box',
             **kwargs
         )
 
-        self.name = name
-        self.team_color = team_color
-        self.is_local = is_local
-        self.team_manager = team_manager
-        self.kills = 0
-        self.health = 100
-        self.speed = 5
-        self.ai_target = None
-        self.double_sided = True
-        self.grounded = True
+        self.enabled = True
+        self.visible = True
 
-        # Display name
-        self.name_tag = Text(
+        self.spawn_point = Vec3(spawn_point[0], 1, spawn_point[2])  # ensure above ground
+        self.team_color = team_color
+        self.name_text = Text(
             text=name,
-            parent=self,
-            y=2.2,
-            world=True,
-            scale=1,
-            origin=(0, 0),
+            position=(0, 2.5, 0),
+            scale=2,
             color=color.white,
-            billboard=True
+            parent=self,
+            origin=(0, 0),
+            world=True
         )
 
-        # Camera setup
-        if self.is_local:
-            self.camera_pivot = Entity(parent=self, y=2)
-            camera.parent = self.camera_pivot
-            camera.position = (0, 0, -6)
-            camera.rotation = (10, 0, 0)
-            mouse.locked = False
-        else:
-            self.camera_pivot = self  # fallback for gun parenting
+        self.health = 100
+        self.health_bar = Entity(
+            model='quad',
+            color=color.green,
+            scale=(1, 0.1),
+            position=(0, 2.2, 0),
+            parent=self,
+            always_on_top=True
+        )
+        self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
 
-        # Gun setup
+        self.speed = PLAYER_SPEED
+        self.jump_height = PLAYER_JUMP_HEIGHT  # unused now, no gravity
+        self.kills = 0
+        self.dead = False
+        self.team_manager = team_manager
+        self.is_local = is_local
+
         self.gun = Gun(player=self)
 
+        if self.is_local:
+            camera.parent = self
+            camera.position = (0, 2, -10)  # zoomed out a bit more
+            camera.rotation = (10, 0, 0)
+            mouse.locked = True
+
     def update(self):
-        if self.health <= 0:
+        if self.dead:
             return
 
         if self.is_local:
@@ -59,53 +63,66 @@ class Player(Entity):
             self._update_ai()
 
     def _handle_input(self):
-        move_dir = Vec3(
+        move = Vec3(
             held_keys['d'] - held_keys['a'],
             0,
             held_keys['w'] - held_keys['s']
         ).normalized()
 
-        self.rotation_y += mouse.velocity[0] * 40
-        self.position += self.forward * move_dir.z * self.speed * time.dt
-        self.position += self.right * move_dir.x * self.speed * time.dt
+        self.rotation_y += mouse.velocity[0] * 100
+
+        move = self.forward * move.z + self.right * move.x
+        self.position += move * self.speed * time.dt
 
         if held_keys['space']:
             self.jump()
 
-        if held_keys['left mouse']:
-            self.gun.shoot()
-
-    def _update_ai(self):
-        if not self.team_manager:
-            return
-
-        if not self.ai_target or self.ai_target.health <= 0:
-            enemies = self.team_manager.get_opposing_team(self.team_color).players
-            if enemies:
-                self.ai_target = random.choice(enemies)
-
-        if self.ai_target:
-            dir_to_target = (self.ai_target.position - self.position).normalized()
-            self.look_at(self.ai_target.position + Vec3(0, 1.5, 0))
-            self.position += dir_to_target * self.speed * time.dt * 0.5
-
-            if distance_xz(self, self.ai_target) < 20:
-                self.gun.shoot()
+        self.gun.aim_target = mouse.world_point if mouse.world_point else self.forward
+        self.gun.update()
 
     def jump(self):
-        if not hasattr(self, 'velocity_y'):
-            self.velocity_y = 0
+        pass  # Gravity is disabled
 
-        if self.grounded:
-            self.velocity_y = 8
-            self.grounded = False
+    def _update_ai(self):
+        enemies = self.team_manager.get_opposing_players(self.team_color)
+        if not enemies:
+            return
 
-    def take_damage(self, amount):
+        nearest = min(enemies, key=lambda p: distance(p.position, self.position))
+        if nearest.dead:
+            return
+
+        self.look_at(nearest.position + Vec3(0, 1, 0))
+        if distance(self.position, nearest.position) < 20:
+            self.gun.aim_target = nearest.position
+            self.gun.update()
+
+    def take_damage(self, amount, attacker=None):
+        if self.dead:
+            return
+
         self.health -= amount
-        if self.health <= 0:
-            self.health = 0
-            self.on_death()
+        self.health_bar.scale_x = self.health / 100
 
-    def on_death(self):
-        destroy(self)
-        print(f"{self.name} has died.")
+        if self.health <= 0:
+            if attacker:
+                attacker.kills += 1
+            self.die()
+
+    def die(self):
+        if self.dead:
+            return
+        self.dead = True
+        self.health_bar.enabled = False
+        self.visible = False
+        self.collider = None
+        invoke(self.respawn, delay=3)
+
+    def respawn(self):
+        self.position = Vec3(self.spawn_point[0], 1, self.spawn_point[2])
+        self.health = 100
+        self.dead = False
+        self.visible = True
+        self.health_bar.enabled = True
+        self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
+        self.health_bar.scale_x = 1
