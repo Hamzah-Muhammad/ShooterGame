@@ -9,11 +9,12 @@ import search_destroy
 app = Ursina()
 
 window.title = 'ShooterGame'
-window.borderless = False
+window.borderless = True
+window.fullscreen = True
 window.exit_button.visible = False
 window.fps_counter.enabled = True
 window.color = color.black
-window.size = (1280, 720)
+window.size = (1920, 1080)
 
 create_map()
 
