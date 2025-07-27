@@ -1,6 +1,7 @@
 from ursina import *
 from gun import Gun
 from config import PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT
+import search_destroy
 import math
 
 class Player(Entity):
@@ -139,7 +140,10 @@ class Player(Entity):
         self.visible = False
         self.collider = None
         self.hitbox.enabled = False
-        invoke(self.respawn, delay=3)
+        if search_destroy.sd_game:
+            search_destroy.sd_game.on_player_death(self)
+        else:
+            invoke(self.respawn, delay=3)
 
     def respawn(self):
         self.position = Vec3(self.spawn_point[0], 1, self.spawn_point[2])
