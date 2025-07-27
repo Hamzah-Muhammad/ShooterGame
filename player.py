@@ -61,7 +61,7 @@ class Player(Entity):
 
         if self.is_local:
             camera.parent = self
-            camera.position = (0, 2, -10)  # zoomed out a bit more
+            camera.position = (0, 2, 1)  # zoomed out a bit more
             camera.rotation = (10, 0, 0)
             self.camera_pitch = camera.rotation_x
             mouse.locked = True
