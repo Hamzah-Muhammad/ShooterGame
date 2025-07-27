@@ -3,12 +3,9 @@ from config import BULLET_SPEED, BULLET_LIFETIME, BULLET_DAMAGE
 
 class Gun(Entity):
     def __init__(self, player, **kwargs):
-        parent_entity = camera if player.is_local else player
-        gun_position = Vec3(0.3, -0.2, 1) if player.is_local else Vec3(0.3, 1.2, 0.5)
-
         super().__init__(
-            parent=parent_entity,
-            position=gun_position,
+            parent=player,
+            position=Vec3(0.3, 1.2, 0.5),
             model='cube',
             scale=(0.2, 0.2, 1),
             color=color.gray,
