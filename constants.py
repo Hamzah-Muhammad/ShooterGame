@@ -6,9 +6,11 @@ TEAM_COLORS = {
 }
 
 SPAWN_POINTS = {
-    'blue': [(-20 + i * 10, 0, -30) for i in range(5)],
-    'red':  [(-20 + i * 10, 0, 30) for i in range(5)]
+    'blue': [(-15 + i * 10, 1, -15) for i in range(5)],
+    'red':  [(-15 + i * 10, 1,  15) for i in range(5)]
 }
+
+
 
 MAX_SCORE = 20
 PLAYER_SPEED = 5
@@ -18,3 +20,5 @@ RELOAD_TIME = 1.5
 AMMO_CAPACITY = 10
 BULLET_SPEED = 30
 BULLET_LIFETIME = 1.5
+MAP_SIZE = 50
+

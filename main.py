@@ -1,44 +1,36 @@
 from ursina import *
-from player import Player
-from teams import TeamManager
+from teams import team_manager
 from scoreboard import Scoreboard
-from map import create_map
-from constants import SPAWN_POINTS
+from config import MAP_SIZE
 
 app = Ursina()
-create_map()
 
-team_mgr = TeamManager()
-scoreboard = Scoreboard()
-players = []
+window.color = color.rgb(100, 149, 237)
+window.borderless = False
+window.fullscreen = False
+window.size = (1280, 720)
+window.position = Vec2(192, 108)
 
-def spawn_teams():
-    for i in range(5):
-        is_player = (i == 0)  # Only first blue is the local player
+# Load map
+ground = Entity(
+    model='plane',
+    texture='white_cube',
+    texture_scale=(MAP_SIZE, MAP_SIZE),
+    scale=(MAP_SIZE, 1, MAP_SIZE),
+    color=color.gray,
+    collider='box'
+)
 
-        blue = Player(
-            team_color=color.azure,
-            spawn_point=SPAWN_POINTS['blue'][i],
-            is_local=is_player
-        )
-        red = Player(
-            team_color=color.red,
-            spawn_point=SPAWN_POINTS['red'][i],
-            is_local=False
-        )
-
-        team_mgr.assign_team(blue, 'blue')
-        team_mgr.assign_team(red, 'red')
-
-        blue.scoreboard = scoreboard
-        red.scoreboard = scoreboard
-
-        players.append(blue)
-        players.append(red)
+team_manager.spawn_teams()
+scoreboard = Scoreboard(team_manager)
 
 def update():
-    for p in players:
-        p.update()
+    for player in team_manager.blue_team.players + team_manager.red_team.players:
+        player.update()
+        if hasattr(player, 'gun'):
+            player.gun.update()
 
-spawn_teams()
+    scoreboard.update_score()
+
+
 app.run()
