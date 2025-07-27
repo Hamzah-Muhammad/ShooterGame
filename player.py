@@ -63,6 +63,16 @@ class Player(Entity):
             camera.position = (0, 2, -10)  # zoomed out a bit more
             camera.rotation = (10, 0, 0)
             mouse.locked = True
+            # add small yellow dot crosshair at the center of the screen
+            self.crosshair = Entity(
+                parent=camera.ui,
+                model='quad',
+                texture='circle',
+                color=color.yellow,
+                scale=0.02,
+                position=Vec2(0, 0),
+                enabled=True
+            )
 
     def update(self):
         if self.dead:
