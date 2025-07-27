@@ -8,6 +8,7 @@ class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
         super().__init__(
             model='soldier.obj',
+            double_sided=True,
             scale=PLAYER_SCALE if PLAYER_SCALE != Vec3(0,0,0) else Vec3(1,1,1),
             color=team_color,
             position=spawn_point,
@@ -62,6 +63,7 @@ class Player(Entity):
             camera.parent = self
             camera.position = (0, 2, -10)  # zoomed out a bit more
             camera.rotation = (10, 0, 0)
+            self.camera_pitch = camera.rotation_x
             mouse.locked = True
             # add small yellow dot crosshair at the center of the screen
             self.crosshair = Entity(
@@ -91,6 +93,9 @@ class Player(Entity):
         ).normalized()
 
         self.rotation_y += mouse.velocity[0] * 100
+        self.camera_pitch -= mouse.velocity[1] * 100
+        self.camera_pitch = max(min(self.camera_pitch, 60), -60)
+        camera.rotation_x = self.camera_pitch
 
         move = self.forward * move.z + self.right * move.x
         self.position += move * self.speed * time.dt
