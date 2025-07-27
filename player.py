@@ -61,9 +61,13 @@ class Player(Entity):
 
         if self.is_local:
             camera.parent = self
-            camera.position = (0, 2, -10)  # zoomed out a bit more
-            camera.rotation = (10, 0, 0)
+            # place the camera at roughly eye level for a first-person view
+            camera.position = (0, 1.6, 0)
+            camera.rotation = (0, 0, 0)
             self.camera_pitch = camera.rotation_x
+            # show the gun from the player's perspective
+            self.gun.parent = camera
+            self.gun.position = Vec3(0.4, -0.3, 1)
             mouse.locked = True
             # add small yellow dot crosshair at the center of the screen
             self.crosshair = Entity(
