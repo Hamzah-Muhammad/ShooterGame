@@ -171,6 +171,11 @@ class SearchAndDestroyGame:
 
     def apply_team_colors(self):
         """Color attacking team red and defenders blue."""
+        # Update the team objects' colour attributes so helper methods that rely
+        # on these values (like TeamManager.get_opposing_team) continue to work
+        # after sides switch.
+        self.attacking_team.color = color.red
+        self.defending_team.color = color.azure
         for p in self.attacking_team.players:
             p.color = color.red
             p.team_color = color.red
