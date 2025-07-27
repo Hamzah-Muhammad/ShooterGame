@@ -38,6 +38,15 @@ class Player(Entity):
             always_on_top=True
         )
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
+        # Separate hitbox entity for more reliable bullet collisions
+        self.hitbox = Entity(
+            parent=self,
+            model='cube',
+            scale=Vec3(1, 2, 1),
+            position=Vec3(0, 1, 0),
+            collider='box',
+            visible=False
+        )
 
         self.speed = PLAYER_SPEED
         self.jump_height = PLAYER_JUMP_HEIGHT  # unused now, no gravity
@@ -129,6 +138,7 @@ class Player(Entity):
         self.health_bar.enabled = False
         self.visible = False
         self.collider = None
+        self.hitbox.enabled = False
         invoke(self.respawn, delay=3)
 
     def respawn(self):
@@ -138,4 +148,5 @@ class Player(Entity):
         self.visible = True
         self.health_bar.enabled = True
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
+        self.hitbox.enabled = True
         self.health_bar.scale_x = 1
