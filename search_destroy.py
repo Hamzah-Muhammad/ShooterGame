@@ -1,4 +1,4 @@
-from ursina import Entity, color, destroy, time, distance
+from ursina import Entity, Text, color, destroy, time, distance
 from config import (
     ROUND_LIMIT,
     BOMB_SPAWN,
@@ -25,15 +25,29 @@ class SearchAndDestroyGame:
         self.bomb_timer = 0
         self.bomb_planted = False
 
-        # Only site B is used for planting
+        # Only site B is used for planting. Make it highly visible
         self.plant_site = Entity(
-            model='cube', color=color.orange, scale=3, position=BOMB_SITE_B
+            model='cube',
+            color=color.rgb(255, 180, 180),
+            scale=3,
+            position=BOMB_SITE_B,
+        )
+        # Large translucent box to highlight the site
+        self.plant_highlight = Entity(
+            model='cube',
+            color=color.rgba(255, 0, 0, 80),
+            scale=6,
+            position=(BOMB_SITE_B[0], 0.05, BOMB_SITE_B[2]),
         )
 
         # The red team starts as the attackers
         self.attacking_team = self.team_manager.red_team
         self.defending_team = self.team_manager.blue_team
         self.rounds_played = 0
+        self.switch_message = None
+
+        # Ensure player colours match the current roles
+        self.apply_team_colors()
 
     def start_round(self):
         """Respawn all players and reset bomb state."""
@@ -56,6 +70,9 @@ class SearchAndDestroyGame:
         self.planting_team = None
         self.bomb_timer = 0
         self.bomb_planted = False
+
+        # Update player colours for the current roles
+        self.apply_team_colors()
 
     def on_player_death(self, player):
         """Check if a team has been eliminated after a death."""
@@ -80,6 +97,10 @@ class SearchAndDestroyGame:
                 self.defending_team,
                 self.attacking_team,
             )
+            self.show_switch_message()
+
+        # Update colours whenever roles may have changed
+        self.apply_team_colors()
 
         if self.blue_rounds >= self.round_limit or self.red_rounds >= self.round_limit:
             # Match over, reset scores
@@ -147,6 +168,28 @@ class SearchAndDestroyGame:
             return
         self.bomb_entity = Entity(model='cube', color=color.black, scale=0.5, position=position)
         self.bomb_carrier = None
+
+    def apply_team_colors(self):
+        """Color attacking team red and defenders blue."""
+        for p in self.attacking_team.players:
+            p.color = color.red
+            p.team_color = color.red
+        for p in self.defending_team.players:
+            p.color = color.azure
+            p.team_color = color.azure
+
+    def show_switch_message(self):
+        """Display a temporary message when teams switch roles."""
+        if self.switch_message:
+            destroy(self.switch_message)
+        self.switch_message = Text(
+            text="Sides switched!",
+            origin=(0, 0),
+            scale=2,
+            background=True,
+            color=color.white,
+        )
+        destroy(self.switch_message, delay=3)
 
 
 # Global instance used throughout the game
