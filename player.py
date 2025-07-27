@@ -76,6 +76,17 @@ class Player(Entity):
                 position=Vec2(0, 0),
                 enabled=True
             )
+            # indicator text for when the player has the bomb
+            self.bomb_indicator = Text(
+                text='',
+                parent=camera.ui,
+                position=window.bottom_left + Vec2(0.05, 0.1),
+                origin=(0, 0),
+                scale=1.5,
+                color=color.white
+            )
+        else:
+            self.bomb_indicator = None
 
     def update(self):
         if self.dead:
@@ -83,6 +94,9 @@ class Player(Entity):
 
         if self.is_local:
             self._handle_input()
+            # Update bomb indicator for the local player
+            if self.bomb_indicator:
+                self.bomb_indicator.text = 'You have the bomb' if self.has_bomb else ''
         else:
             self._update_ai()
 
@@ -166,6 +180,8 @@ class Player(Entity):
         if self.has_bomb and search_destroy.sd_game:
             search_destroy.sd_game.drop_bomb(self.position)
             self.has_bomb = False
+        if self.bomb_indicator:
+            self.bomb_indicator.text = ''
         if search_destroy.sd_game:
             search_destroy.sd_game.on_player_death(self)
         else:
@@ -181,3 +197,5 @@ class Player(Entity):
         self.hitbox.enabled = True
         self.health_bar.scale_x = 1
         self.has_bomb = False
+        if self.bomb_indicator:
+            self.bomb_indicator.text = ''
