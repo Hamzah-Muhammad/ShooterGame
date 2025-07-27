@@ -1,4 +1,5 @@
 from ursina import Entity, Text, color, destroy, time, distance
+import math
 from config import (
     ROUND_LIMIT,
     BOMB_SPAWN,
@@ -46,6 +47,11 @@ class SearchAndDestroyGame:
         self.rounds_played = 0
         self.switch_message = None
 
+        # Countdown state for round start
+        self.countdown_active = False
+        self.countdown = 0
+        self.countdown_text = None
+
         # Ensure player colours match the current roles
         self.apply_team_colors()
 
@@ -73,6 +79,9 @@ class SearchAndDestroyGame:
 
         # Update player colours for the current roles
         self.apply_team_colors()
+
+        # Begin round countdown
+        self.start_countdown()
 
     def on_player_death(self, player):
         """Check if a team has been eliminated after a death."""
@@ -111,6 +120,17 @@ class SearchAndDestroyGame:
 
     def update(self):
         """Update bomb logic each frame."""
+        if self.countdown_active:
+            self.countdown -= time.dt
+            remaining = math.ceil(self.countdown)
+            if remaining > 0:
+                self.countdown_text.text = str(remaining)
+            if self.countdown <= 0:
+                self.countdown_active = False
+                destroy(self.countdown_text)
+                self.countdown_text = None
+            return
+
         if not self.bomb_planted and not self.bomb_carrier and self.bomb_entity:
             for p in self.attacking_team.players:
                 if p.dead:
@@ -195,6 +215,21 @@ class SearchAndDestroyGame:
             color=color.white,
         )
         destroy(self.switch_message, delay=3)
+
+    def start_countdown(self, seconds: int = 3):
+        """Display a countdown before the round starts."""
+        if self.countdown_text:
+            destroy(self.countdown_text)
+        self.countdown = seconds
+        self.countdown_active = True
+        self.countdown_text = Text(
+            text=str(seconds),
+            origin=(0, 0),
+            scale=4,
+            background=True,
+            color=color.white,
+        )
+
 
 
 # Global instance used throughout the game

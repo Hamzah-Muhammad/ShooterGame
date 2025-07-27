@@ -92,6 +92,9 @@ class Player(Entity):
         if self.dead:
             return
 
+        if search_destroy.sd_game and search_destroy.sd_game.countdown_active:
+            return
+
         if self.is_local:
             self._handle_input()
             # Update bomb indicator for the local player
