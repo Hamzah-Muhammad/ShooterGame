@@ -5,7 +5,7 @@ import search_destroy
 import math
 
 class Player(Entity):
-    def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, first_person=False, **kwargs):
+    def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
         super().__init__(
             model='soldier.obj',
             double_sided=True,
@@ -56,22 +56,13 @@ class Player(Entity):
         self.dead = False
         self.team_manager = team_manager
         self.is_local = is_local
-        self.first_person = first_person
 
         self.gun = Gun(player=self)
 
         if self.is_local:
             camera.parent = self
-            if self.first_person:
-                camera.position = (0, 1.7, 0)
-                camera.rotation = (0, 0, 0)
-                self.gun.parent = camera
-                self.gun.position = Vec3(0.2, -0.2, 1)
-                self.gun.rotation = (0, 0, 0)
-                self.visible = False
-            else:
-                camera.position = (0, 2, -10)  # zoomed out a bit more
-                camera.rotation = (10, 0, 0)
+            camera.position = (0, 2, -10)  # zoomed out a bit more
+            camera.rotation = (10, 0, 0)
             self.camera_pitch = camera.rotation_x
             mouse.locked = True
             # add small yellow dot crosshair at the center of the screen
