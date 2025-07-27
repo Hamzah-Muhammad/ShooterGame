@@ -61,10 +61,12 @@ class Player(Entity):
 
         if self.is_local:
             camera.parent = self
-            camera.position = (0, 2, -10)  # zoomed out a bit more
-            camera.rotation = (10, 0, 0)
+            camera.position = (0, 1.8, 0)  # first-person viewpoint
+            camera.rotation = (0, 0, 0)
             self.camera_pitch = camera.rotation_x
             mouse.locked = True
+            # Hide the local player's body so it doesn't block the camera
+            self.visible = False
             # add small yellow dot crosshair at the center of the screen
             self.crosshair = Entity(
                 parent=camera.ui,
