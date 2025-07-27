@@ -1,6 +1,7 @@
 from ursina import *
 from gun import Gun
 from config import PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT
+import math
 
 class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
@@ -88,18 +89,26 @@ class Player(Entity):
     def _update_ai(self):
         enemies = self.team_manager.get_opposing_players(self.team_color)
         if not enemies:
+            self.gun.update()
             return
 
         nearest = min(enemies, key=lambda p: distance(p.position, self.position))
         if nearest.dead:
+            self.gun.update()
             return
 
-        self.look_at(nearest.position + Vec3(0, 1, 0))
+        # Rotate towards the enemy without tilting upside down
+        direction = nearest.position - self.position
+        direction.y = 0
+        if direction.length() > 0:
+            self.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
+
         if distance(self.position, nearest.position) < 20:
             self.gun.aim_target = nearest.position
             if not self.gun.bullet:
                 self.gun.shoot()
-            self.gun.update()
+
+        self.gun.update()
 
     def take_damage(self, amount, attacker=None):
         if self.dead:

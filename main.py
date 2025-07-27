@@ -21,5 +21,6 @@ scoreboard = Scoreboard(team_manager)
 def update():
     for player in team_manager.all_players:
         player.update()
+    scoreboard.update()
 
 app.run()
