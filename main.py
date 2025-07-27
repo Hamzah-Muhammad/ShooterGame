@@ -30,11 +30,15 @@ Button(
     position=(0, 0.05),
     on_click=lambda: toggle_menu(False),
 )
+def quit_game():
+    application.quit()
+
+
 Button(
     text='Close Game',
     parent=pause_menu,
     position=(0, -0.05),
-    on_click=application.quit,
+    on_click=quit_game,
 )
 
 def toggle_menu(show=None):
