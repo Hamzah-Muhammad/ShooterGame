@@ -29,7 +29,7 @@ class Gun(Entity):
             direction=direction,
             speed=BULLET_SPEED,
             life=BULLET_LIFETIME,
-            collision=True
+            collider='sphere'
         )
 
     def update(self):
@@ -47,9 +47,11 @@ class Gun(Entity):
             self.bullet = None
             return
 
-        # Check hit
+        # Check hit against each opposing player's hitbox
         for player in self.player.team_manager.get_opposing_players(self.player.team_color):
-            if distance(self.bullet.position, player.position) < 1.5 and not player.dead:
+            if player.dead:
+                continue
+            if self.bullet.intersects(player.hitbox).hit:
                 player.take_damage(BULLET_DAMAGE, attacker=self.player)
                 destroy(self.bullet)
                 self.bullet = None

@@ -1,6 +1,7 @@
 from ursina import *
 from gun import Gun
 from config import PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT
+import math
 
 class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
@@ -37,6 +38,15 @@ class Player(Entity):
             always_on_top=True
         )
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
+        # Separate hitbox entity for more reliable bullet collisions
+        self.hitbox = Entity(
+            parent=self,
+            model='cube',
+            scale=Vec3(1, 2, 1),
+            position=Vec3(0, 1, 0),
+            collider='box',
+            visible=False
+        )
 
         self.speed = PLAYER_SPEED
         self.jump_height = PLAYER_JUMP_HEIGHT  # unused now, no gravity
@@ -88,18 +98,26 @@ class Player(Entity):
     def _update_ai(self):
         enemies = self.team_manager.get_opposing_players(self.team_color)
         if not enemies:
+            self.gun.update()
             return
 
         nearest = min(enemies, key=lambda p: distance(p.position, self.position))
         if nearest.dead:
+            self.gun.update()
             return
 
-        self.look_at(nearest.position + Vec3(0, 1, 0))
+        # Rotate towards the enemy without tilting upside down
+        direction = nearest.position - self.position
+        direction.y = 0
+        if direction.length() > 0:
+            self.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
+
         if distance(self.position, nearest.position) < 20:
             self.gun.aim_target = nearest.position
             if not self.gun.bullet:
                 self.gun.shoot()
-            self.gun.update()
+
+        self.gun.update()
 
     def take_damage(self, amount, attacker=None):
         if self.dead:
@@ -120,6 +138,7 @@ class Player(Entity):
         self.health_bar.enabled = False
         self.visible = False
         self.collider = None
+        self.hitbox.enabled = False
         invoke(self.respawn, delay=3)
 
     def respawn(self):
@@ -129,4 +148,5 @@ class Player(Entity):
         self.visible = True
         self.health_bar.enabled = True
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
+        self.hitbox.enabled = True
         self.health_bar.scale_x = 1
