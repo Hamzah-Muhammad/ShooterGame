@@ -1,6 +1,7 @@
 # map.py - Sets up the terrain and environment
 
 from ursina import *
+import random
 
 def create_map():
     ground = Entity(model='plane', scale=(60, 1, 60), texture='white_cube', texture_scale=(60, 60), color=color.light_gray, collider='box')
