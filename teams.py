@@ -21,7 +21,7 @@ class TeamManager:
             spawn = self.blue_team.spawn_points[i % len(self.blue_team.spawn_points)]
             name = self.blue_team.names[i % len(self.blue_team.names)]
             is_local = (i == 0)  # First player is local
-            player = Player(team_color=self.blue_team.color, spawn_point=spawn, name=name, is_local=is_local, team_manager=self)
+            player = Player(team_color=self.blue_team.color, spawn_point=spawn, name=name, is_local=is_local, team_manager=self, first_person=is_local)
             self.blue_team.players.append(player)
 
         for i in range(5):
