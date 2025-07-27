@@ -31,7 +31,7 @@ Button(
     on_click=lambda: toggle_menu(False),
 )
 Button(
-    text='Exit Game',
+    text='Close Game',
     parent=pause_menu,
     position=(0, -0.05),
     on_click=application.quit,
@@ -43,6 +43,7 @@ def toggle_menu(show=None):
     else:
         pause_menu.enabled = show
     mouse.locked = not pause_menu.enabled
+    application.paused = pause_menu.enabled
 
 def input(key):
     if key == 'escape':
