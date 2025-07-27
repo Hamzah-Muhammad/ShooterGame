@@ -20,6 +20,9 @@ class Scoreboard(Entity):
             color=color.red
         )
 
+    def update(self):
+        self.update_score()
+
     def update_score(self):
         blue_kills = sum([p.kills for p in self.team_manager.blue_team.players])
         red_kills = sum([p.kills for p in self.team_manager.red_team.players])

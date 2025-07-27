@@ -78,6 +78,8 @@ class Player(Entity):
             self.jump()
 
         self.gun.aim_target = mouse.world_point if mouse.world_point else self.forward
+        if mouse.left:
+            self.gun.shoot()
         self.gun.update()
 
     def jump(self):
@@ -95,6 +97,8 @@ class Player(Entity):
         self.look_at(nearest.position + Vec3(0, 1, 0))
         if distance(self.position, nearest.position) < 20:
             self.gun.aim_target = nearest.position
+            if not self.gun.bullet:
+                self.gun.shoot()
             self.gun.update()
 
     def take_damage(self, amount, attacker=None):

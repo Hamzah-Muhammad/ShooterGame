@@ -1,5 +1,5 @@
 from ursina import *
-from config import BULLET_SPEED, BULLET_LIFETIME
+from config import BULLET_SPEED, BULLET_LIFETIME, BULLET_DAMAGE
 
 class Gun(Entity):
     def __init__(self, player, **kwargs):
@@ -50,8 +50,7 @@ class Gun(Entity):
         # Check hit
         for player in self.player.team_manager.get_opposing_players(self.player.team_color):
             if distance(self.bullet.position, player.position) < 1.5 and not player.dead:
-                player.take_damage()
-                self.player.kills += 1
+                player.take_damage(BULLET_DAMAGE, attacker=self.player)
                 destroy(self.bullet)
                 self.bullet = None
                 break

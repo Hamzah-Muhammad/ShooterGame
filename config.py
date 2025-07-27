@@ -19,6 +19,7 @@ PLAYER_JUMP_HEIGHT = 2.5    # Adjust as needed for your game
 # Bullet settings
 BULLET_SPEED = 20
 BULLET_LIFETIME = 3
+BULLET_DAMAGE = 25
 
 # Colors
 TEAM_COLORS = {
