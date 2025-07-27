@@ -2,7 +2,8 @@
 
 from ursina import *
 import random
-from config import MAP_SIZE
+from config import MAP_SIZE, BOMB_SITES
+import math
 
 def create_map():
     # Create the ground based on the configured map size
@@ -50,8 +51,18 @@ def create_map():
         visible=False
     )
 
-    # Randomly place obstacles (simple houses/walls)
-    num_obstacles = MAP_SIZE // 5  # scale the amount with map size
+    # Create houses for each bomb site
+    for site in BOMB_SITES:
+        Entity(
+            model='cube',
+            scale=(6, 4, 6),
+            position=site,
+            color=color.rgb(139, 69, 19),
+            collider='box'
+        )
+
+    # Random obstacles to add cover
+    num_obstacles = MAP_SIZE // 8
     for _ in range(num_obstacles):
         size_x = random.uniform(2, 6)
         size_z = random.uniform(2, 6)
@@ -64,6 +75,24 @@ def create_map():
             color=color.rgb(139, 69, 19),
             collider='box'
         )
+
+    # Roads between sites
+    def create_road(start, end):
+        start = Vec3(start)
+        end = Vec3(end)
+        mid = (start + end) / 2
+        length = math.sqrt((end.x - start.x) ** 2 + (end.z - start.z) ** 2)
+        angle = math.degrees(math.atan2(end.x - start.x, end.z - start.z))
+        Entity(
+            model='cube',
+            scale=(4, 0.1, length),
+            position=(mid.x, 0.05, mid.z),
+            rotation=(0, angle, 0),
+            color=color.gray
+        )
+
+    for i in range(len(BOMB_SITES)):
+        create_road(BOMB_SITES[i], BOMB_SITES[(i + 1) % len(BOMB_SITES)])
 
     DirectionalLight(y=3, z=3, shadows=True)
     Sky()

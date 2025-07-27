@@ -28,5 +28,6 @@ def update():
     for player in team_manager.all_players:
         player.update()
     scoreboard.update()
+    search_destroy.sd_game.update()
 
 app.run()

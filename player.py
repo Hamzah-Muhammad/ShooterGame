@@ -56,6 +56,7 @@ class Player(Entity):
         self.dead = False
         self.team_manager = team_manager
         self.is_local = is_local
+        self.has_bomb = False
 
         self.gun = Gun(player=self)
 
@@ -108,6 +109,9 @@ class Player(Entity):
             self.gun.shoot()
         self.gun.update()
 
+        if held_keys['4'] and search_destroy.sd_game:
+            search_destroy.sd_game.handle_action(self)
+
     def jump(self):
         pass  # Gravity is disabled
 
@@ -159,6 +163,9 @@ class Player(Entity):
         self.visible = False
         self.collider = None
         self.hitbox.enabled = False
+        if self.has_bomb and search_destroy.sd_game:
+            search_destroy.sd_game.drop_bomb(self.position)
+            self.has_bomb = False
         if search_destroy.sd_game:
             search_destroy.sd_game.on_player_death(self)
         else:
@@ -173,3 +180,4 @@ class Player(Entity):
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
         self.hitbox.enabled = True
         self.health_bar.scale_x = 1
+        self.has_bomb = False
