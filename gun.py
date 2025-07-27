@@ -21,6 +21,8 @@ class Gun(Entity):
             return  # Only one bullet at a time for now
 
         direction = self.forward
+        if self.player.is_local:
+            direction = camera.forward
         self.bullet = Entity(
             model='sphere',
             color=color.yellow,
