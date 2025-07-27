@@ -15,6 +15,41 @@ def create_map():
         collider='box'
     )
 
+    # Create invisible boundary walls to keep players inside the map
+    wall_thickness = 1
+    wall_height = 5
+    half_size = MAP_SIZE / 2
+    # North and south walls
+    Entity(
+        model='cube',
+        scale=(MAP_SIZE, wall_height, wall_thickness),
+        position=(0, wall_height / 2, half_size - wall_thickness / 2),
+        collider='box',
+        visible=False
+    )
+    Entity(
+        model='cube',
+        scale=(MAP_SIZE, wall_height, wall_thickness),
+        position=(0, wall_height / 2, -half_size + wall_thickness / 2),
+        collider='box',
+        visible=False
+    )
+    # East and west walls
+    Entity(
+        model='cube',
+        scale=(wall_thickness, wall_height, MAP_SIZE),
+        position=(half_size - wall_thickness / 2, wall_height / 2, 0),
+        collider='box',
+        visible=False
+    )
+    Entity(
+        model='cube',
+        scale=(wall_thickness, wall_height, MAP_SIZE),
+        position=(-half_size + wall_thickness / 2, wall_height / 2, 0),
+        collider='box',
+        visible=False
+    )
+
     # Randomly place obstacles (simple houses/walls)
     num_obstacles = MAP_SIZE // 5  # scale the amount with map size
     for _ in range(num_obstacles):
