@@ -30,8 +30,9 @@ class SearchAndDestroyGame:
             model='cube', color=color.orange, scale=3, position=BOMB_SITE_B
         )
 
-        self.attacking_team = self.team_manager.blue_team
-        self.defending_team = self.team_manager.red_team
+        # The red team starts as the attackers
+        self.attacking_team = self.team_manager.red_team
+        self.defending_team = self.team_manager.blue_team
         self.rounds_played = 0
 
     def start_round(self):
@@ -44,8 +45,12 @@ class SearchAndDestroyGame:
         if self.planted_bomb:
             destroy(self.planted_bomb)
 
-        self.bomb_entity = Entity(model='sphere', color=color.white, scale=1,
-                                 position=BOMB_SPAWN)
+        # Spawn the bomb near the attacking team's spawn
+        spawn_point = self.attacking_team.spawn_points[0]
+        spawn_pos = (spawn_point[0], 1, spawn_point[2])
+        self.bomb_entity = Entity(
+            model='cube', color=color.black, scale=0.5, position=spawn_pos
+        )
         self.planted_bomb = None
         self.bomb_carrier = None
         self.planting_team = None
@@ -123,7 +128,7 @@ class SearchAndDestroyGame:
 
     def plant_bomb(self, player):
         self.planted_bomb = Entity(
-            model='sphere', color=color.red, scale=1, position=self.plant_site.position
+            model='cube', color=color.black, scale=0.5, position=self.plant_site.position
         )
         self.bomb_planted = True
         self.planting_team = self.attacking_team
@@ -140,7 +145,7 @@ class SearchAndDestroyGame:
     def drop_bomb(self, position):
         if self.bomb_entity or self.bomb_planted:
             return
-        self.bomb_entity = Entity(model='sphere', color=color.white, scale=1, position=position)
+        self.bomb_entity = Entity(model='cube', color=color.black, scale=0.5, position=position)
         self.bomb_carrier = None
 
 
