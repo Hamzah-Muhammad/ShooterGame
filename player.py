@@ -1,6 +1,7 @@
 from ursina import *
 from gun import Gun
 from config import PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT
+import search_destroy
 import math
 
 class Player(Entity):
@@ -96,23 +97,27 @@ class Player(Entity):
         pass  # Gravity is disabled
 
     def _update_ai(self):
-        enemies = self.team_manager.get_opposing_players(self.team_color)
+        enemies = [p for p in self.team_manager.get_opposing_players(self.team_color) if not p.dead]
         if not enemies:
             self.gun.update()
             return
 
         nearest = min(enemies, key=lambda p: distance(p.position, self.position))
-        if nearest.dead:
-            self.gun.update()
-            return
 
-        # Rotate towards the enemy without tilting upside down
+        # Vector toward the nearest enemy on the XZ plane
         direction = nearest.position - self.position
         direction.y = 0
-        if direction.length() > 0:
+        dist = direction.length()
+
+        if dist > 0:
             self.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
 
-        if distance(self.position, nearest.position) < 20:
+        # Move toward the enemy if far enough away
+        if dist > 3:
+            self.position += direction.normalized() * self.speed * time.dt
+
+        # Shoot when within range
+        if dist < 20:
             self.gun.aim_target = nearest.position
             if not self.gun.bullet:
                 self.gun.shoot()
@@ -139,7 +144,10 @@ class Player(Entity):
         self.visible = False
         self.collider = None
         self.hitbox.enabled = False
-        invoke(self.respawn, delay=3)
+        if search_destroy.sd_game:
+            search_destroy.sd_game.on_player_death(self)
+        else:
+            invoke(self.respawn, delay=3)
 
     def respawn(self):
         self.position = Vec3(self.spawn_point[0], 1, self.spawn_point[2])

@@ -6,6 +6,9 @@ PLAYER_SCALE = 1.5
 # and to position spawn points near the edges.
 MAP_SIZE = 100
 SCORE_LIMIT = 10
+
+# Search & Destroy settings
+ROUND_LIMIT = 5  # Number of rounds needed to win the match
 GAME_RUNNING = True
 JUMP_HEIGHT = 5
 MAX_HEALTH = 100
