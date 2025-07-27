@@ -22,13 +22,19 @@ team_manager.spawn_teams()
 scoreboard = Scoreboard(team_manager)
 
 # Create a simple pause menu that toggles with the escape key
-pause_menu = Entity(parent=camera.ui, enabled=False)
-Panel(parent=pause_menu, scale=(0.4, 0.3), color=color.rgba(0, 0, 0, 150))
+pause_menu = Entity(parent=camera.ui, enabled=False, ignore_paused=True)
+Panel(
+    parent=pause_menu,
+    scale=(0.4, 0.3),
+    color=color.rgba(0, 0, 0, 150),
+    ignore_paused=True,
+)
 Button(
     text='Resume',
     parent=pause_menu,
     position=(0, 0.05),
     on_click=lambda: toggle_menu(False),
+    ignore_paused=True,
 )
 def quit_game():
     application.quit()
@@ -39,6 +45,7 @@ Button(
     parent=pause_menu,
     position=(0, -0.05),
     on_click=quit_game,
+    ignore_paused=True,
 )
 
 def toggle_menu(show=None):
