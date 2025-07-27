@@ -12,15 +12,15 @@ class Scoreboard(Entity):
         self.team1_text = Text(
             text='Team 1: 0',
             position=window.top_left + Vec2(0.05, -0.05),
-            origin=(0, 0),
-            scale=1.5,
+            origin=(-0.5, 0.5),
+            scale=1.25,
             color=color.azure,
         )
         self.team2_text = Text(
             text='Team 2: 0',
             position=window.top_left + Vec2(0.05, -0.12),
-            origin=(0, 0),
-            scale=1.5,
+            origin=(-0.5, 0.5),
+            scale=1.25,
             color=color.red,
         )
 
