@@ -13,8 +13,11 @@ class Team:
 
 class TeamManager:
     def __init__(self):
-        self.blue_team = Team('blue', TEAM_COLORS['blue'], SPAWN_POINTS['blue'], BLUE_NAMES)
-        self.red_team = Team('red', TEAM_COLORS['red'], SPAWN_POINTS['red'], RED_NAMES)
+        # Use classic Counter‑Strike style names for the teams.  Internally we
+        # still refer to them as "blue" and "red" via their colours, but the
+        # human‑readable names now map to "Counter‑Terrorists" and "Terrorists".
+        self.blue_team = Team('Counter-Terrorists', TEAM_COLORS['blue'], SPAWN_POINTS['blue'], BLUE_NAMES)
+        self.red_team = Team('Terrorists', TEAM_COLORS['red'], SPAWN_POINTS['red'], RED_NAMES)
 
     def spawn_teams(self):
         for i in range(5):

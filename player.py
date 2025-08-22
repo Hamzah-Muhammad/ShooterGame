@@ -8,6 +8,7 @@ class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
         super().__init__(
             model='soldier.obj',
+            texture='white_cube',
             double_sided=True,
             scale=PLAYER_SCALE if PLAYER_SCALE != Vec3(0,0,0) else Vec3(1,1,1),
             color=team_color,
