@@ -10,9 +10,9 @@ help the world feel less like a prototype.
 """
 
 from ursina import *
-import random
 from config import MAP_SIZE, BOMB_SITES
 import math
+import itertools
 
 def create_map():
     # Create the ground based on the configured map size
@@ -43,29 +43,51 @@ def create_map():
     for scale, position in wall_configs:
         Entity(model='cube', scale=scale, position=position, collider='box', visible=False)
 
-    # Create houses for each bomb site.  Using a simple ``brick`` texture helps
-    # them stand out against the terrain.
-    for site in BOMB_SITES:
-        Entity(
+    # Utility functions to add town features
+    house_colors = [
+        color.rgb(160, 82, 45),   # warm brown
+        color.rgb(210, 180, 140), # tan
+        color.rgb(200, 100, 100), # red
+        color.rgb(100, 100, 200), # blue
+        color.rgb(220, 220, 220)  # light gray
+    ]
+    color_cycle = itertools.cycle(house_colors)
+
+    def create_house(position, scale=(6, 4, 6)):
+        return Entity(
             model='cube',
-            scale=(6, 4, 6),
-            position=site,
+            scale=scale,
+            position=position,
             texture='brick',
-            color=color.rgb(160, 82, 45),
+            color=next(color_cycle),
             collider='box'
         )
 
-    # Random obstacles to add cover
-    num_obstacles = MAP_SIZE // 8
-    for _ in range(num_obstacles):
-        size_x = random.uniform(2, 6)
-        size_z = random.uniform(2, 6)
-        pos_x = random.uniform(-MAP_SIZE / 2 + size_x, MAP_SIZE / 2 - size_x)
-        pos_z = random.uniform(-MAP_SIZE / 2 + size_z, MAP_SIZE / 2 - size_z)
+    def create_lamppost(position):
+        Entity(model='cube', scale=(0.3, 4, 0.3), position=(position.x, 2, position.z), color=color.rgb(80, 80, 80))
+        PointLight(position=(position.x, 4, position.z), color=color.rgb(255, 240, 200), shadows=True)
+
+    def create_tree(position):
+        Entity(model='cube', scale=(1, 4, 1), position=(position[0], 2, position[2]), color=color.rgb(101, 67, 33))
+        Entity(model='sphere', scale=3, position=(position[0], 5, position[2]), color=color.rgb(34, 139, 34))
+
+    # Create houses for each bomb site to form key town buildings
+    for site in BOMB_SITES:
+        create_house(site)
+
+    # Deterministic obstacles to add cover
+    obstacle_configs = [
+        ((5, 3, 5), (-80, 1, 80)),
+        ((7, 2, 4), (80, 1, 80)),
+        ((4, 3, 6), (-80, 1, -80)),
+        ((6, 2, 5), (80, 1, -80)),
+        ((8, 3, 8), (0, 1, 0)),
+    ]
+    for scale, position in obstacle_configs:
         Entity(
             model='cube',
-            scale=(size_x, random.uniform(2, 4), size_z),
-            position=(pos_x, 1, pos_z),
+            scale=scale,
+            position=position,
             texture='brick',
             color=color.rgb(120, 70, 40),
             collider='box'
@@ -86,9 +108,28 @@ def create_map():
             texture='white_cube',
             color=color.rgb(50, 50, 50)
         )
+        # Populate the street with houses and lamps
+        direction = (end - start).normalized()
+        side_offset = Vec3(-direction.z, 0, direction.x) * 10
+        steps = int(length // 20)
+        for i in range(1, steps):
+            pos = start + direction * (i * 20)
+            create_house(pos + side_offset)
+            create_house(pos - side_offset)
+            create_lamppost(pos)
 
     for i in range(len(BOMB_SITES)):
         create_road(BOMB_SITES[i], BOMB_SITES[(i + 1) % len(BOMB_SITES)])
+
+    # Scatter trees evenly around the town for a bit of greenery
+    tree_spacing = 40
+    perimeter = int(MAP_SIZE // tree_spacing)
+    for i in range(perimeter):
+        offset = -half_size + 20 + i * tree_spacing
+        create_tree((offset, 0, half_size - 20))
+        create_tree((offset, 0, -half_size + 20))
+        create_tree((half_size - 20, 0, offset))
+        create_tree((-half_size + 20, 0, offset))
 
     # A subtle ambient light and sunset skybox make the level feel warmer and
     # closer to a real outdoor environment.
