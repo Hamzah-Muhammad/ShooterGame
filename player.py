@@ -1,5 +1,6 @@
 from ursina import *
 from gun import Gun
+from buy_menu import BuyMenu
 from config import PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT
 import search_destroy
 import math
@@ -59,6 +60,9 @@ class Player(Entity):
         self.is_local = is_local
         self.has_bomb = False
         self.controller = controller
+        # simple economy/armour system
+        self.money = 1000
+        self.armor = 0
 
         self.gun = Gun(player=self)
 
@@ -87,8 +91,12 @@ class Player(Entity):
                 scale=1.5,
                 color=color.white
             )
+            # purchase menu
+            self.buy_menu = BuyMenu(self)
+            self._b_down = False
         else:
             self.bomb_indicator = None
+            self.buy_menu = None
 
     def update(self):
         if self.dead:
@@ -108,7 +116,23 @@ class Player(Entity):
             elif self.controller == 'network':
                 self.gun.update()
 
+    def equip_gun(self, gun_cls):
+        """Replace the current gun with an instance of ``gun_cls``."""
+        if self.gun:
+            destroy(self.gun)
+        self.gun = gun_cls(player=self)
+
+    def buy_armour(self, amount=100):
+        self.armor = amount
+
     def _handle_input(self):
+        if self.buy_menu:
+            if held_keys['b'] and not self._b_down:
+                self.buy_menu.toggle()
+            self._b_down = held_keys['b']
+            if self.buy_menu.enabled:
+                return
+
         move = Vec3(
             held_keys['d'] - held_keys['a'],
             0,
@@ -178,6 +202,13 @@ class Player(Entity):
         if self.dead:
             return
 
+        if self.armor > 0:
+            absorbed = amount * 0.5
+            self.armor -= absorbed
+            if self.armor < 0:
+                self.armor = 0
+            amount -= absorbed
+
         self.health -= amount
         self.health_bar.scale_x = self.health / 100
 
@@ -214,5 +245,6 @@ class Player(Entity):
         self.hitbox.enabled = True
         self.health_bar.scale_x = 1
         self.has_bomb = False
+        self.armor = 0
         if self.bomb_indicator:
             self.bomb_indicator.text = ''
