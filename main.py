@@ -1,5 +1,4 @@
 from ursina import *
-from config import MAP_SIZE
 from map import create_map
 from teams import team_manager
 from scoreboard import Scoreboard
@@ -8,7 +7,7 @@ import search_destroy
 
 app = Ursina()
 
-window.title = 'ShooterGame'
+window.title = 'Streets of Karachi'
 window.borderless = True
 window.fullscreen = True
 window.exit_button.visible = False
@@ -16,12 +15,48 @@ window.fps_counter.enabled = True
 window.color = color.black
 window.size = (1920, 1080)
 
-create_map()
+scoreboard = None
 
-team_manager.spawn_teams()
-scoreboard = Scoreboard(team_manager)
 
-# Create a simple pause menu that toggles with the escape key
+def start_game(mode: str):
+    """Initialize the selected game mode and hide the start menu."""
+    global scoreboard
+    start_menu.enabled = False
+    create_map()
+    team_manager.spawn_teams(mode=mode)
+    scoreboard = Scoreboard(team_manager)
+    if mode == '5v5':
+        search_destroy.sd_game = SearchAndDestroyGame(team_manager)
+        search_destroy.sd_game.start_round()
+    else:
+        search_destroy.sd_game = None
+    mouse.locked = True
+
+
+# --- Start Menu ---
+start_menu = Entity(parent=camera.ui, ignore_paused=True)
+Panel(
+    parent=start_menu,
+    scale=(0.6, 0.4),
+    color=color.rgba(0, 0, 0, 150),
+    ignore_paused=True,
+)
+Button(
+    text='5v5 Search & Destroy',
+    parent=start_menu,
+    position=(0, 0.05),
+    on_click=lambda: start_game('5v5'),
+    ignore_paused=True,
+)
+Button(
+    text='1v1 Duel',
+    parent=start_menu,
+    position=(0, -0.05),
+    on_click=lambda: start_game('1v1'),
+    ignore_paused=True,
+)
+
+# --- Pause Menu ---
 pause_menu = Entity(parent=camera.ui, enabled=False, ignore_paused=True)
 Panel(
     parent=pause_menu,
@@ -36,6 +71,7 @@ Button(
     on_click=lambda: toggle_menu(False),
     ignore_paused=True,
 )
+
 def quit_game():
     application.quit()
 
@@ -48,6 +84,7 @@ Button(
     ignore_paused=True,
 )
 
+
 def toggle_menu(show=None):
     if show is None:
         pause_menu.enabled = not pause_menu.enabled
@@ -56,20 +93,20 @@ def toggle_menu(show=None):
     mouse.locked = not pause_menu.enabled
     application.paused = pause_menu.enabled
 
+
 def input(key):
-    if key == 'escape':
+    if key == 'escape' and not start_menu.enabled:
         toggle_menu()
 
-# Initialize Search & Destroy game mode
-search_destroy.sd_game = SearchAndDestroyGame(team_manager)
-search_destroy.sd_game.start_round()
 
 def update():
-    if pause_menu.enabled:
+    if start_menu.enabled or pause_menu.enabled or not scoreboard:
         return
     for player in team_manager.all_players:
         player.update()
     scoreboard.update()
-    search_destroy.sd_game.update()
+    if search_destroy.sd_game:
+        search_destroy.sd_game.update()
+
 
 app.run()

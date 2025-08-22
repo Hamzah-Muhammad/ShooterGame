@@ -19,18 +19,72 @@ class TeamManager:
         self.blue_team = Team('Counter-Terrorists', TEAM_COLORS['blue'], SPAWN_POINTS['blue'], BLUE_NAMES)
         self.red_team = Team('Terrorists', TEAM_COLORS['red'], SPAWN_POINTS['red'], RED_NAMES)
 
-    def spawn_teams(self):
+    def spawn_teams(self, mode="5v5"):
+        """Spawn players for the chosen game mode.
+
+        Parameters
+        ----------
+        mode:
+            ``"5v5"`` for the classic Search & Destroy setup or ``"1v1"`` for a
+            simple duel.  In the duel mode only a single local player and a
+            single AI opponent are created.
+        """
+
+        # Clear out any existing players so the function can be reused if the
+        # game is restarted with a different mode.
+        self.blue_team.players = []
+        self.red_team.players = []
+
+        if mode == "1v1":
+            # Local player on the blue team
+            spawn = self.blue_team.spawn_points[0]
+            name = self.blue_team.names[0]
+            player = Player(
+                team_color=self.blue_team.color,
+                spawn_point=spawn,
+                name=name,
+                is_local=True,
+                team_manager=self,
+            )
+            self.blue_team.players.append(player)
+
+            # Single AI opponent on the red team
+            spawn = self.red_team.spawn_points[0]
+            name = self.red_team.names[0]
+            opponent = Player(
+                team_color=self.red_team.color,
+                spawn_point=spawn,
+                name=name,
+                is_local=False,
+                team_manager=self,
+            )
+            self.red_team.players.append(opponent)
+            return
+
+        # Default 5v5 behaviour
         for i in range(5):
             spawn = self.blue_team.spawn_points[i % len(self.blue_team.spawn_points)]
             name = self.blue_team.names[i % len(self.blue_team.names)]
-            is_local = (i == 0)  # First player is local
-            player = Player(team_color=self.blue_team.color, spawn_point=spawn, name=name, is_local=is_local, team_manager=self)
+            is_local = i == 0  # First player is local
+            player = Player(
+                team_color=self.blue_team.color,
+                spawn_point=spawn,
+                name=name,
+                is_local=is_local,
+                team_manager=self,
+            )
             self.blue_team.players.append(player)
 
         for i in range(5):
             spawn = self.red_team.spawn_points[i % len(self.red_team.spawn_points)]
             name = self.red_team.names[i % len(self.red_team.names)]
-            player = Player(team_color=self.red_team.color, spawn_point=spawn, name=name, is_local=False, team_manager=self)
+            player = Player(
+                team_color=self.red_team.color,
+                spawn_point=spawn,
+                name=name,
+                is_local=False,
+                team_manager=self,
+            )
             self.red_team.players.append(player)
 
     def get_opposing_team(self, team_color):
