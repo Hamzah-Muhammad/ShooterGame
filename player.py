@@ -5,7 +5,7 @@ import search_destroy
 import math
 
 class Player(Entity):
-    def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
+    def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, controller='ai', **kwargs):
         super().__init__(
             model='soldier.obj',
             texture='white_cube',
@@ -58,6 +58,7 @@ class Player(Entity):
         self.team_manager = team_manager
         self.is_local = is_local
         self.has_bomb = False
+        self.controller = controller
 
         self.gun = Gun(player=self)
 
@@ -102,7 +103,10 @@ class Player(Entity):
             if self.bomb_indicator:
                 self.bomb_indicator.text = 'You have the bomb' if self.has_bomb else ''
         else:
-            self._update_ai()
+            if self.controller == 'ai':
+                self._update_ai()
+            elif self.controller == 'network':
+                self.gun.update()
 
     def _handle_input(self):
         move = Vec3(
@@ -159,6 +163,15 @@ class Player(Entity):
             if not self.gun.bullet:
                 self.gun.shoot()
 
+        self.gun.update()
+
+    def apply_network_state(self, state):
+        pos = state.get('pos')
+        if pos:
+            self.position = Vec3(*pos)
+        rot_y = state.get('rot_y')
+        if rot_y is not None:
+            self.rotation_y = rot_y
         self.gun.update()
 
     def take_damage(self, amount, attacker=None):

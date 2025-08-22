@@ -19,7 +19,7 @@ class TeamManager:
         self.blue_team = Team('Counter-Terrorists', TEAM_COLORS['blue'], SPAWN_POINTS['blue'], BLUE_NAMES)
         self.red_team = Team('Terrorists', TEAM_COLORS['red'], SPAWN_POINTS['red'], RED_NAMES)
 
-    def spawn_teams(self, mode="5v5"):
+    def spawn_teams(self, mode="5v5", network_role=None):
         """Spawn players for the chosen game mode.
 
         Parameters
@@ -36,30 +36,80 @@ class TeamManager:
         self.red_team.players = []
 
         if mode == "1v1":
-            # Local player on the blue team
-            spawn = self.blue_team.spawn_points[0]
-            name = self.blue_team.names[0]
-            player = Player(
-                team_color=self.blue_team.color,
-                spawn_point=spawn,
-                name=name,
-                is_local=True,
-                team_manager=self,
-            )
-            self.blue_team.players.append(player)
+            if network_role == 'host':
+                # Host controls blue player; red player is remote
+                spawn = self.blue_team.spawn_points[0]
+                name = self.blue_team.names[0]
+                local_player = Player(
+                    team_color=self.blue_team.color,
+                    spawn_point=spawn,
+                    name=name,
+                    is_local=True,
+                    team_manager=self,
+                )
+                self.blue_team.players.append(local_player)
 
-            # Single AI opponent on the red team
-            spawn = self.red_team.spawn_points[0]
-            name = self.red_team.names[0]
-            opponent = Player(
-                team_color=self.red_team.color,
-                spawn_point=spawn,
-                name=name,
-                is_local=False,
-                team_manager=self,
-            )
-            self.red_team.players.append(opponent)
-            return
+                spawn = self.red_team.spawn_points[0]
+                name = self.red_team.names[0]
+                remote_player = Player(
+                    team_color=self.red_team.color,
+                    spawn_point=spawn,
+                    name=name,
+                    is_local=False,
+                    team_manager=self,
+                    controller='network',
+                )
+                self.red_team.players.append(remote_player)
+                return local_player, remote_player
+            elif network_role == 'client':
+                # Client controls red player; blue player is remote
+                spawn = self.blue_team.spawn_points[0]
+                name = self.blue_team.names[0]
+                remote_player = Player(
+                    team_color=self.blue_team.color,
+                    spawn_point=spawn,
+                    name=name,
+                    is_local=False,
+                    team_manager=self,
+                    controller='network',
+                )
+                self.blue_team.players.append(remote_player)
+
+                spawn = self.red_team.spawn_points[0]
+                name = self.red_team.names[0]
+                local_player = Player(
+                    team_color=self.red_team.color,
+                    spawn_point=spawn,
+                    name=name,
+                    is_local=True,
+                    team_manager=self,
+                )
+                self.red_team.players.append(local_player)
+                return local_player, remote_player
+            else:
+                # Offline 1v1 against AI
+                spawn = self.blue_team.spawn_points[0]
+                name = self.blue_team.names[0]
+                local_player = Player(
+                    team_color=self.blue_team.color,
+                    spawn_point=spawn,
+                    name=name,
+                    is_local=True,
+                    team_manager=self,
+                )
+                self.blue_team.players.append(local_player)
+
+                spawn = self.red_team.spawn_points[0]
+                name = self.red_team.names[0]
+                opponent = Player(
+                    team_color=self.red_team.color,
+                    spawn_point=spawn,
+                    name=name,
+                    is_local=False,
+                    team_manager=self,
+                )
+                self.red_team.players.append(opponent)
+                return local_player, opponent
 
         # Default 5v5 behaviour
         for i in range(5):
@@ -86,6 +136,8 @@ class TeamManager:
                 team_manager=self,
             )
             self.red_team.players.append(player)
+        local_player = self.blue_team.players[0]
+        return local_player, None
 
     def get_opposing_team(self, team_color):
         return self.red_team if team_color == self.blue_team.color else self.blue_team
