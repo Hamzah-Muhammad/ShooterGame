@@ -7,8 +7,9 @@ class Gun(Entity):
             parent=player,
             position=Vec3(0.3, 1.2, 0.5),
             model='cube',
+            texture='white_cube',
             scale=(0.2, 0.2, 1),
-            color=color.gray,
+            color=color.rgb(80, 80, 80),
             origin_z=-0.5,
             **kwargs
         )
@@ -49,12 +50,14 @@ class Gun(Entity):
             self.bullet = None
             return
 
-        # Check hit against each opposing player's hitbox
-        for player in self.player.team_manager.get_opposing_players(self.player.team_color):
-            if player.dead:
-                continue
-            if self.bullet.intersects(player.hitbox).hit:
-                player.take_damage(BULLET_DAMAGE, attacker=self.player)
-                destroy(self.bullet)
-                self.bullet = None
-                break
+        # Check for a collision against any entity in the world.  This avoids
+        # manually testing the bullet against each player every frame and also
+        # lets bullets disappear when they hit walls or other scenery.
+        hit_info = self.bullet.intersects(ignore=[self.player])
+        if hit_info.hit:
+            for player in self.player.team_manager.get_opposing_players(self.player.team_color):
+                if hit_info.entity == player.hitbox:
+                    player.take_damage(BULLET_DAMAGE, attacker=self.player)
+                    break
+            destroy(self.bullet)
+            self.bullet = None
