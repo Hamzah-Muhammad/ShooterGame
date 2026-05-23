@@ -1,7 +1,8 @@
 from ursina import *
 from gun import Gun
 from config import (
-    PLAYER_SCALE, PLAYER_SPEED, SPRINT_SPEED, PLAYER_JUMP_HEIGHT, GRAVITY,
+    PLAYER_SCALE, PLAYER_SPEED, SPRINT_SPEED, CROUCH_SPEED,
+    PLAYER_JUMP_HEIGHT, GRAVITY,
     BOMB_PLANT_RADIUS, BOMB_DEFUSE_RADIUS, AMMO_CAPACITY,
 )
 import search_destroy
@@ -9,12 +10,13 @@ from killfeed import kill_feed
 import math
 import random
 
+
 class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
         super().__init__(
             model='soldier.obj',
             double_sided=True,
-            scale=PLAYER_SCALE if PLAYER_SCALE != Vec3(0,0,0) else Vec3(1,1,1),
+            scale=PLAYER_SCALE if PLAYER_SCALE != Vec3(0, 0, 0) else Vec3(1, 1, 1),
             color=team_color,
             position=spawn_point,
             **kwargs
@@ -54,6 +56,7 @@ class Player(Entity):
             collider='box',
             visible=False
         )
+        self.hitbox.owner = self
 
         self.speed = PLAYER_SPEED
         self.jump_height = PLAYER_JUMP_HEIGHT
@@ -62,6 +65,8 @@ class Player(Entity):
         self.team_manager = team_manager
         self.is_local = is_local
         self.has_bomb = False
+        self.is_moving = False
+        self.is_crouching = False
 
         # Gravity state
         self.velocity_y = 0
@@ -107,9 +112,18 @@ class Player(Entity):
                 scale=1.5,
                 color=color.white,
             )
+            self.health_text = Text(
+                text='100',
+                parent=camera.ui,
+                position=window.bottom_left + Vec2(0.05, 0.17),
+                origin=(0, 0),
+                scale=2,
+                color=color.white,
+            )
         else:
             self.bomb_indicator = None
             self.ammo_text = None
+            self.health_text = None
 
     def update(self):
         if self.dead:
@@ -131,6 +145,15 @@ class Player(Entity):
                 else:
                     self.ammo_text.text = f'{self.gun.ammo} / {AMMO_CAPACITY}'
                     self.ammo_text.color = color.white if self.gun.ammo > 3 else color.red
+            if self.health_text:
+                hp = max(0, int(self.health))
+                self.health_text.text = str(hp)
+                if hp > 50:
+                    self.health_text.color = color.white
+                elif hp > 25:
+                    self.health_text.color = color.orange
+                else:
+                    self.health_text.color = color.red
         else:
             self._update_ai()
 
@@ -157,7 +180,23 @@ class Player(Entity):
         self.camera_pitch = max(min(self.camera_pitch, 60), -60)
         camera.rotation_x = self.camera_pitch
 
-        move_speed = SPRINT_SPEED if held_keys['shift'] and move.length() > 0 else PLAYER_SPEED
+        # Crouch (ctrl)
+        if held_keys['control']:
+            self.is_crouching = True
+            camera.y = 1.0
+        else:
+            self.is_crouching = False
+            camera.y = 2.0
+
+        if self.is_crouching:
+            move_speed = CROUCH_SPEED
+        elif held_keys['shift'] and move.length() > 0:
+            move_speed = SPRINT_SPEED
+        else:
+            move_speed = PLAYER_SPEED
+
+        self.is_moving = move.length() > 0.01
+
         move = self.forward * move.z + self.right * move.x
         self.position += move * move_speed * time.dt
 
@@ -167,7 +206,6 @@ class Player(Entity):
         if held_keys['r']:
             self.gun.reload()
 
-        self.gun.aim_target = mouse.world_point if mouse.world_point else self.forward
         if mouse.left:
             self.gun.shoot()
         self.gun.update()
@@ -187,16 +225,15 @@ class Player(Entity):
             self._evasion_dir = self.right if random.random() > 0.5 else -self.right
         self._last_health = self.health
 
-        # Apply evasion (only when not already strafing around an obstacle)
         if self._evasion_timer > 0 and self._strafe_timer <= 0:
             self._evasion_timer -= time.dt
             self.position += self._evasion_dir * self.speed * time.dt
+            self.is_moving = True
 
         if search_destroy.sd_game:
             sd = search_destroy.sd_game
             is_attacker = self.team_color == sd.attacking_team.color
 
-            # Bomb carrier: move to nearest site, plant, and shoot nearby enemies
             if self.has_bomb and sd.plant_sites:
                 nearest_site = min(sd.plant_sites, key=lambda s: distance(self.position, s.position))
                 self._ai_move_toward(nearest_site.position)
@@ -206,7 +243,6 @@ class Player(Entity):
                 self.gun.update()
                 return
 
-            # Defender: move toward planted bomb, defuse, and shoot nearby enemies
             if not is_attacker and sd.bomb_planted and sd.planted_bomb:
                 self._ai_move_toward(sd.planted_bomb.position)
                 if distance(self.position, sd.planted_bomb.position) < BOMB_DEFUSE_RADIUS:
@@ -215,9 +251,9 @@ class Player(Entity):
                 self.gun.update()
                 return
 
-        # Default: find and engage nearest enemy
         enemies = [p for p in self.team_manager.get_opposing_players(self.team_color) if not p.dead]
         if not enemies:
+            self.is_moving = False
             self.gun.update()
             return
 
@@ -230,16 +266,17 @@ class Player(Entity):
             self.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
 
         if dist > 3:
+            self.is_moving = True
             self._ai_move_toward(nearest.position)
+        else:
+            self.is_moving = False
 
         if dist < 20:
-            self.gun.aim_target = nearest.position
             self.gun.shoot()
 
         self.gun.update()
 
     def _ai_engage_nearby(self, range_limit=14):
-        """Shoot at nearest enemy within range without interrupting movement."""
         enemies = [p for p in self.team_manager.get_opposing_players(self.team_color) if not p.dead]
         if not enemies:
             return
@@ -255,6 +292,7 @@ class Player(Entity):
         direction.y = 0
         dist = direction.length()
         if dist < 0.5:
+            self.is_moving = False
             return
 
         direction = direction.normalized()
@@ -276,15 +314,16 @@ class Player(Entity):
         else:
             self._strafe_timer = 0
             self.position += direction * self.speed * time.dt
+        self.is_moving = True
 
     def _show_hit_marker(self):
         c = color.rgba(255, 50, 50, 230)
         size, gap = 0.025, 0.014
         offsets = [
-            (Vec2( gap + size/2, 0), (size, 0.003)),
-            (Vec2(-(gap + size/2), 0), (size, 0.003)),
-            (Vec2(0,  gap + size/2), (0.003, size)),
-            (Vec2(0, -(gap + size/2)), (0.003, size)),
+            (Vec2(gap + size / 2, 0), (size, 0.003)),
+            (Vec2(-(gap + size / 2), 0), (size, 0.003)),
+            (Vec2(0, gap + size / 2), (0.003, size)),
+            (Vec2(0, -(gap + size / 2)), (0.003, size)),
         ]
         for pos, scl in offsets:
             line = Entity(parent=camera.ui, model='quad', color=c, scale=scl, position=pos)
@@ -295,7 +334,7 @@ class Player(Entity):
             return
 
         self.health -= amount
-        self.health_bar.scale_x = self.health / 100
+        self.health_bar.scale_x = max(0, self.health / 100)
 
         if attacker and attacker.is_local:
             attacker._show_hit_marker()
@@ -334,6 +373,8 @@ class Player(Entity):
         self.hitbox.enabled = True
         self.health_bar.scale_x = 1
         self.has_bomb = False
+        self.is_moving = False
+        self.is_crouching = False
         self.velocity_y = 0
         self.on_ground = True
         self._last_health = 100
@@ -344,3 +385,6 @@ class Player(Entity):
         if self.ammo_text:
             self.ammo_text.text = f'{AMMO_CAPACITY} / {AMMO_CAPACITY}'
             self.ammo_text.color = color.white
+        if self.health_text:
+            self.health_text.text = '100'
+            self.health_text.color = color.white

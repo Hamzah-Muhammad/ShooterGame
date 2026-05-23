@@ -36,11 +36,20 @@ class Scoreboard(Entity):
 
     def update_score(self):
         if search_destroy.sd_game:
-            blue_score = search_destroy.sd_game.blue_rounds
-            red_score  = search_destroy.sd_game.red_rounds
-            limit      = search_destroy.sd_game.round_limit
-            round_num  = search_destroy.sd_game.rounds_played + 1
-            self.round_text.text = f'Round {round_num}  |  First to {limit}'
+            sd = search_destroy.sd_game
+            blue_score = sd.blue_rounds
+            red_score  = sd.red_rounds
+            round_num  = sd.rounds_played + 1
+            time_left  = max(0, sd.round_time_left)
+            mins = int(time_left) // 60
+            secs = int(time_left) % 60
+            self.round_text.text = f'Round {round_num}  |  {mins}:{secs:02d}'
+            if time_left < 30:
+                self.round_text.color = color.red
+            elif time_left < 60:
+                self.round_text.color = color.orange
+            else:
+                self.round_text.color = color.white
         else:
             blue_score = sum(p.kills for p in self.team_manager.blue_team.players)
             red_score  = sum(p.kills for p in self.team_manager.red_team.players)

@@ -8,6 +8,9 @@ from config import (
     BOMB_PICKUP_RADIUS,
     BOMB_PLANT_RADIUS,
     BOMB_DEFUSE_RADIUS,
+    ROUND_TIME,
+    PLANT_TIME,
+    DEFUSE_TIME,
 )
 
 SITE_COLORS = [
@@ -33,7 +36,6 @@ class SearchAndDestroyGame:
         self.bomb_timer = 0
         self.bomb_planted = False
 
-        # One marker entity per bomb site — all three are live plant targets
         self.plant_sites = []
         for i, site in enumerate(BOMB_SITES):
             marker = Entity(
@@ -58,7 +60,6 @@ class SearchAndDestroyGame:
             )
             self.plant_sites.append(marker)
 
-        # Red team starts as attackers
         self.attacking_team = self.team_manager.red_team
         self.defending_team = self.team_manager.blue_team
         self.rounds_played = 0
@@ -67,15 +68,50 @@ class SearchAndDestroyGame:
         self.bomb_timer_ui = None
         self.bomb_plant_notif = None
 
-        # Countdown state for round start
         self.countdown_active = False
         self.countdown = 0
         self.countdown_text = None
 
+        # Round timer
+        self.round_time_left = ROUND_TIME
+
+        # Timed action state
+        self.action_type = None      # 'plant' or 'defuse'
+        self.action_player = None
+        self.action_timer = 0.0
+        self._action_this_frame = False
+        self._active_site_pos = None
+
+        # Action progress HUD (only local player sees it — camera.ui)
+        self.action_label = Text(
+            text='',
+            position=(0, -0.40),
+            origin=(0, 0),
+            scale=2,
+            color=color.white,
+            enabled=False,
+        )
+        self.action_bar_bg = Entity(
+            model='quad',
+            parent=camera.ui,
+            color=color.rgb(40, 40, 40),
+            scale=(0.35, 0.022),
+            position=(0, -0.46),
+            enabled=False,
+        )
+        self.action_bar_fill = Entity(
+            model='quad',
+            parent=camera.ui,
+            color=color.yellow,
+            scale=(0.001, 0.018),
+            position=(-0.175, -0.46),
+            origin=(-0.5, 0),
+            enabled=False,
+        )
+
         self.apply_team_colors()
 
     def start_round(self):
-        """Respawn all players and reset bomb state."""
         for player in self.team_manager.all_players:
             player.respawn()
 
@@ -100,12 +136,13 @@ class SearchAndDestroyGame:
         self.planting_team = None
         self.bomb_timer = 0
         self.bomb_planted = False
+        self.round_time_left = ROUND_TIME
 
+        self._reset_action()
         self.apply_team_colors()
         self.start_countdown()
 
     def on_player_death(self, player):
-        """Check if a team has been eliminated after a death."""
         team = (
             self.team_manager.blue_team
             if player.team_color == self.team_manager.blue_team.color
@@ -115,6 +152,9 @@ class SearchAndDestroyGame:
         if self.bomb_carrier == player and not self.bomb_planted:
             self.drop_bomb(player.position)
         if not remaining:
+            # Bomb planted + all attackers dead → CTs must still defuse
+            if self.bomb_planted and team is self.attacking_team:
+                return
             winner = self.team_manager.get_opposing_team(player.team_color)
             self._award_round(winner)
 
@@ -142,7 +182,6 @@ class SearchAndDestroyGame:
             self.start_round()
 
     def update(self):
-        """Update bomb logic each frame."""
         if self.countdown_active:
             self.countdown -= time.dt
             remaining = math.ceil(self.countdown)
@@ -154,6 +193,14 @@ class SearchAndDestroyGame:
                 self.countdown_text = None
             return
 
+        # Round timer — only counts down before bomb is planted
+        if not self.bomb_planted:
+            self.round_time_left -= time.dt
+            if self.round_time_left <= 0:
+                self._award_round(self.defending_team)
+                return
+
+        # Bomb pickup
         if not self.bomb_planted and not self.bomb_carrier and self.bomb_entity:
             for p in self.attacking_team.players:
                 if p.dead:
@@ -165,6 +212,7 @@ class SearchAndDestroyGame:
                     self.bomb_entity = None
                     break
 
+        # Bomb countdown after plant
         if self.bomb_planted:
             self.bomb_timer -= time.dt
             if self.bomb_timer_ui:
@@ -182,13 +230,20 @@ class SearchAndDestroyGame:
             if self.bomb_timer <= 0:
                 self._explode_bomb()
                 self._award_round(self.planting_team)
+                return
+
+        # Cancel action if handle_action wasn't called this frame
+        if not self._action_this_frame:
+            self._reset_action()
+        self._action_this_frame = False
 
     def handle_action(self, player):
-        """Attempt to plant or defuse the bomb."""
         if player.dead:
             return
 
-        # Plant: carrier near any site
+        self._action_this_frame = True
+
+        # Plant
         if (
             player == self.bomb_carrier
             and not self.bomb_planted
@@ -196,17 +251,55 @@ class SearchAndDestroyGame:
         ):
             for site in self.plant_sites:
                 if distance(player.position, site.position) < BOMB_PLANT_RADIUS:
-                    self.plant_bomb(player, site.position)
+                    if self.action_type != 'plant' or self.action_player != player:
+                        self.action_type = 'plant'
+                        self.action_player = player
+                        self.action_timer = 0.0
+                        self._active_site_pos = site.position
+                    self.action_timer += time.dt
+                    self._update_action_hud('PLANTING...', self.action_timer / PLANT_TIME, color.orange)
+                    if self.action_timer >= PLANT_TIME:
+                        self.plant_bomb(player, self._active_site_pos)
+                        self._reset_action()
                     return
 
-        # Defuse: defender near planted bomb
+        # Defuse
         if (
             self.bomb_planted
             and self.planted_bomb
             and distance(player.position, self.planted_bomb.position) < BOMB_DEFUSE_RADIUS
             and player.team_color != self.planting_team.color
         ):
-            self.defuse_bomb(player)
+            if self.action_type != 'defuse' or self.action_player != player:
+                self.action_type = 'defuse'
+                self.action_player = player
+                self.action_timer = 0.0
+            self.action_timer += time.dt
+            self._update_action_hud('DEFUSING...', self.action_timer / DEFUSE_TIME, color.cyan)
+            if self.action_timer >= DEFUSE_TIME:
+                self.defuse_bomb(player)
+                self._reset_action()
+            return
+
+        self._reset_action()
+
+    def _update_action_hud(self, label, progress, bar_color=color.yellow):
+        self.action_label.text = label
+        self.action_label.enabled = True
+        self.action_bar_bg.enabled = True
+        self.action_bar_fill.enabled = True
+        self.action_bar_fill.color = bar_color
+        fill_w = max(0.001, min(0.35, 0.35 * progress))
+        self.action_bar_fill.scale_x = fill_w
+
+    def _reset_action(self):
+        self.action_type = None
+        self.action_player = None
+        self.action_timer = 0.0
+        self._active_site_pos = None
+        self.action_label.enabled = False
+        self.action_bar_bg.enabled = False
+        self.action_bar_fill.enabled = False
 
     def plant_bomb(self, player, position):
         self.planted_bomb = Entity(
@@ -218,7 +311,6 @@ class SearchAndDestroyGame:
         self.bomb_carrier = None
         player.has_bomb = False
 
-        # "BOMB PLANTED" on-screen notification
         if self.bomb_plant_notif:
             destroy(self.bomb_plant_notif)
         self.bomb_plant_notif = Text(
@@ -230,7 +322,6 @@ class SearchAndDestroyGame:
         )
         destroy(self.bomb_plant_notif, delay=2)
 
-        # Persistent bomb countdown HUD
         if self.bomb_timer_ui:
             destroy(self.bomb_timer_ui)
         self.bomb_timer_ui = Text(
@@ -260,7 +351,6 @@ class SearchAndDestroyGame:
         self.bomb_carrier = None
 
     def apply_team_colors(self):
-        """Color attacking team red and defenders blue."""
         self.attacking_team.color = color.red
         self.defending_team.color = color.azure
         for p in self.attacking_team.players:
