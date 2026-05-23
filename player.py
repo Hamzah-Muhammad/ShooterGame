@@ -5,6 +5,7 @@ from config import (
     BOMB_PLANT_RADIUS, BOMB_DEFUSE_RADIUS,
 )
 import search_destroy
+from killfeed import kill_feed
 import math
 import random
 
@@ -23,6 +24,7 @@ class Player(Entity):
         self.visible = True
 
         self.spawn_point = Vec3(spawn_point[0], 1, spawn_point[2])
+        self.player_name = name
         self.team_color = team_color
         self.name_text = Text(
             text=name,
@@ -230,6 +232,19 @@ class Player(Entity):
             self._strafe_timer = 0
             self.position += direction * self.speed * time.dt
 
+    def _show_hit_marker(self):
+        c = color.rgba(255, 50, 50, 230)
+        size, gap = 0.025, 0.014
+        offsets = [
+            (Vec2( gap + size/2, 0), (size, 0.003)),
+            (Vec2(-(gap + size/2), 0), (size, 0.003)),
+            (Vec2(0,  gap + size/2), (0.003, size)),
+            (Vec2(0, -(gap + size/2)), (0.003, size)),
+        ]
+        for pos, scl in offsets:
+            line = Entity(parent=camera.ui, model='quad', color=c, scale=scl, position=pos)
+            destroy(line, delay=0.15)
+
     def take_damage(self, amount, attacker=None):
         if self.dead:
             return
@@ -237,9 +252,13 @@ class Player(Entity):
         self.health -= amount
         self.health_bar.scale_x = self.health / 100
 
+        if attacker and attacker.is_local:
+            attacker._show_hit_marker()
+
         if self.health <= 0:
             if attacker:
                 attacker.kills += 1
+                kill_feed.add(attacker.player_name, self.player_name)
             self.die()
 
     def die(self):

@@ -37,6 +37,16 @@ class Gun(Entity):
         self.bullets.append(bullet)
         self.fire_cooldown = FIRE_RATE
 
+        # Muzzle flash
+        flash = Entity(
+            parent=self,
+            model='sphere',
+            color=color.rgba(255, 210, 60, 220),
+            scale=0.35,
+            position=Vec3(0, 0, -1.1),
+        )
+        destroy(flash, delay=0.05)
+
     def update(self):
         self.fire_cooldown = max(0, self.fire_cooldown - time.dt)
         self._update_bullets()

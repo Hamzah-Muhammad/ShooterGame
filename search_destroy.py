@@ -1,5 +1,6 @@
-from ursina import Entity, Text, Button, Panel, color, destroy, time, distance, camera, application, mouse
+from ursina import Entity, Text, Button, Panel, color, destroy, time, distance, camera, application, mouse, invoke, Vec3
 import math
+import random
 from config import (
     ROUND_LIMIT,
     BOMB_SITES,
@@ -63,6 +64,8 @@ class SearchAndDestroyGame:
         self.rounds_played = 0
         self.switch_message = None
         self.win_screen = None
+        self.bomb_timer_ui = None
+        self.bomb_plant_notif = None
 
         # Countdown state for round start
         self.countdown_active = False
@@ -80,6 +83,12 @@ class SearchAndDestroyGame:
             destroy(self.bomb_entity)
         if self.planted_bomb:
             destroy(self.planted_bomb)
+        if self.bomb_timer_ui:
+            destroy(self.bomb_timer_ui)
+            self.bomb_timer_ui = None
+        if self.bomb_plant_notif:
+            destroy(self.bomb_plant_notif)
+            self.bomb_plant_notif = None
 
         spawn_point = self.attacking_team.spawn_points[0]
         spawn_pos = (spawn_point[0], 1, spawn_point[2])
@@ -158,7 +167,11 @@ class SearchAndDestroyGame:
 
         if self.bomb_planted:
             self.bomb_timer -= time.dt
+            if self.bomb_timer_ui:
+                self.bomb_timer_ui.text = f'BOMB  {max(0, math.ceil(self.bomb_timer))}s'
+                self.bomb_timer_ui.color = color.red if self.bomb_timer > 10 else color.orange
             if self.bomb_timer <= 0:
+                self._explode_bomb()
                 self._award_round(self.planting_team)
 
     def handle_action(self, player):
@@ -196,10 +209,37 @@ class SearchAndDestroyGame:
         self.bomb_carrier = None
         player.has_bomb = False
 
+        # "BOMB PLANTED" on-screen notification
+        if self.bomb_plant_notif:
+            destroy(self.bomb_plant_notif)
+        self.bomb_plant_notif = Text(
+            text='BOMB PLANTED',
+            origin=(0, 0),
+            scale=3,
+            background=True,
+            color=color.red,
+        )
+        destroy(self.bomb_plant_notif, delay=2)
+
+        # Persistent bomb countdown HUD
+        if self.bomb_timer_ui:
+            destroy(self.bomb_timer_ui)
+        self.bomb_timer_ui = Text(
+            text=f'BOMB  {BOMB_TIMER}s',
+            position=(0, -0.38),
+            origin=(0, 0),
+            scale=2,
+            background=True,
+            color=color.red,
+        )
+
     def defuse_bomb(self, player):
         destroy(self.planted_bomb)
         self.planted_bomb = None
         self.bomb_planted = False
+        if self.bomb_timer_ui:
+            destroy(self.bomb_timer_ui)
+            self.bomb_timer_ui = None
         self._award_round(self.team_manager.get_opposing_team(self.planting_team.color))
 
     def drop_bomb(self, position):
@@ -245,6 +285,39 @@ class SearchAndDestroyGame:
             background=True,
             color=color.white,
         )
+
+    def _explode_bomb(self):
+        if not self.planted_bomb:
+            return
+        pos = Vec3(self.planted_bomb.position)
+
+        blast_colors = [color.orange, color.yellow, color.rgb(255, 80, 0)]
+        for i in range(20):
+            p = Entity(
+                model='sphere',
+                color=blast_colors[i % 3],
+                scale=random.uniform(0.5, 2.5),
+                position=pos + Vec3(
+                    random.uniform(-5, 5),
+                    random.uniform(0, 8),
+                    random.uniform(-5, 5),
+                ),
+            )
+            p.animate_scale(0, duration=random.uniform(0.4, 1.2))
+            destroy(p, delay=1.2)
+
+        shockwave = Entity(
+            model='sphere',
+            color=color.rgba(255, 160, 50, 160),
+            scale=1,
+            position=pos,
+        )
+        shockwave.animate_scale(35, duration=0.7)
+        destroy(shockwave, delay=0.7)
+
+        if self.bomb_timer_ui:
+            destroy(self.bomb_timer_ui)
+            self.bomb_timer_ui = None
 
     def _show_match_over(self, winner_name):
         application.paused = True

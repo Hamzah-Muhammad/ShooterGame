@@ -1,98 +1,85 @@
-# map.py - Sets up the terrain and environment
-
 from ursina import *
 import random
 from config import MAP_SIZE, BOMB_SITES
 import math
 
+WALL_COLOR  = color.rgb(110, 75, 45)
+ROOF_COLOR  = color.rgb(60, 40, 25)
+DOOR_COLOR  = color.rgb(15, 10, 8)
+
+def _create_building(site):
+    x, y, z = site
+    # Walls
+    Entity(model='cube', scale=(8, 5, 8), position=(x, y + 1.5, z),
+           color=WALL_COLOR, collider='box')
+    # Roof slab
+    Entity(model='cube', scale=(9.4, 0.5, 9.4), position=(x, y + 4.25, z),
+           color=ROOF_COLOR, collider='box')
+    # Door opening (dark inset on south face)
+    Entity(model='cube', scale=(1.8, 3.2, 0.4), position=(x, y + 0.1, z - 4.2),
+           color=DOOR_COLOR)
+
 def create_map():
-    # Create the ground based on the configured map size
-    ground = Entity(
+    # Ground
+    Entity(
         model='plane',
         scale=(MAP_SIZE, 1, MAP_SIZE),
         texture='grass',
-        texture_scale=(MAP_SIZE, MAP_SIZE),
-        color=color.green,
+        texture_scale=(MAP_SIZE // 8, MAP_SIZE // 8),
+        color=color.rgb(55, 115, 50),
         collider='box'
     )
 
-    # Create invisible boundary walls to keep players inside the map
+    # Invisible boundary walls
     wall_thickness = 1
-    wall_height = 5
-    half_size = MAP_SIZE / 2
-    # North and south walls
-    Entity(
-        model='cube',
-        scale=(MAP_SIZE, wall_height, wall_thickness),
-        position=(0, wall_height / 2, half_size - wall_thickness / 2),
-        collider='box',
-        visible=False
-    )
-    Entity(
-        model='cube',
-        scale=(MAP_SIZE, wall_height, wall_thickness),
-        position=(0, wall_height / 2, -half_size + wall_thickness / 2),
-        collider='box',
-        visible=False
-    )
-    # East and west walls
-    Entity(
-        model='cube',
-        scale=(wall_thickness, wall_height, MAP_SIZE),
-        position=(half_size - wall_thickness / 2, wall_height / 2, 0),
-        collider='box',
-        visible=False
-    )
-    Entity(
-        model='cube',
-        scale=(wall_thickness, wall_height, MAP_SIZE),
-        position=(-half_size + wall_thickness / 2, wall_height / 2, 0),
-        collider='box',
-        visible=False
-    )
+    wall_height = 10
+    half = MAP_SIZE / 2
+    for pos, scl in [
+        ((0,          wall_height/2,  half),           (MAP_SIZE, wall_height, wall_thickness)),
+        ((0,          wall_height/2, -half),            (MAP_SIZE, wall_height, wall_thickness)),
+        (( half,      wall_height/2,  0),               (wall_thickness, wall_height, MAP_SIZE)),
+        ((-half,      wall_height/2,  0),               (wall_thickness, wall_height, MAP_SIZE)),
+    ]:
+        Entity(model='cube', scale=scl, position=pos, collider='box', visible=False)
 
-    # Create houses for each bomb site
+    # Detailed bomb-site buildings
     for site in BOMB_SITES:
-        Entity(
-            model='cube',
-            scale=(6, 4, 6),
-            position=site,
-            color=color.rgb(139, 69, 19),
-            collider='box'
-        )
+        _create_building(site)
 
-    # Random obstacles to add cover
+    # Random cover obstacles
     num_obstacles = MAP_SIZE // 8
     for _ in range(num_obstacles):
-        size_x = random.uniform(2, 6)
-        size_z = random.uniform(2, 6)
-        pos_x = random.uniform(-MAP_SIZE / 2 + size_x, MAP_SIZE / 2 - size_x)
-        pos_z = random.uniform(-MAP_SIZE / 2 + size_z, MAP_SIZE / 2 - size_z)
+        sx = random.uniform(2, 6)
+        sz = random.uniform(2, 6)
+        px = random.uniform(-MAP_SIZE / 2 + sx, MAP_SIZE / 2 - sx)
+        pz = random.uniform(-MAP_SIZE / 2 + sz, MAP_SIZE / 2 - sz)
         Entity(
             model='cube',
-            scale=(size_x, random.uniform(2, 4), size_z),
-            position=(pos_x, 1, pos_z),
-            color=color.rgb(139, 69, 19),
+            scale=(sx, random.uniform(2, 4), sz),
+            position=(px, 1, pz),
+            color=color.rgb(100, 65, 35),
             collider='box'
         )
 
     # Roads between sites
     def create_road(start, end):
-        start = Vec3(start)
-        end = Vec3(end)
-        mid = (start + end) / 2
-        length = math.sqrt((end.x - start.x) ** 2 + (end.z - start.z) ** 2)
-        angle = math.degrees(math.atan2(end.x - start.x, end.z - start.z))
-        Entity(
-            model='cube',
-            scale=(4, 0.1, length),
-            position=(mid.x, 0.05, mid.z),
-            rotation=(0, angle, 0),
-            color=color.gray
-        )
+        s, e = Vec3(start), Vec3(end)
+        mid = (s + e) / 2
+        length = math.sqrt((e.x - s.x) ** 2 + (e.z - s.z) ** 2)
+        angle = math.degrees(math.atan2(e.x - s.x, e.z - s.z))
+        Entity(model='cube', scale=(4, 0.1, length),
+               position=(mid.x, 0.05, mid.z), rotation=(0, angle, 0),
+               color=color.rgb(60, 60, 60))
 
     for i in range(len(BOMB_SITES)):
         create_road(BOMB_SITES[i], BOMB_SITES[(i + 1) % len(BOMB_SITES)])
 
-    DirectionalLight(y=3, z=3, shadows=True)
-    Sky()
+    # Lighting
+    sun = DirectionalLight()
+    sun.look_at(Vec3(1, -3, 1))
+    sun.color = color.rgb(255, 235, 190)
+
+    AmbientLight(color=color.rgba(90, 100, 130, 255))
+
+    sky = Sky()
+    sky.color = color.rgb(100, 155, 220)

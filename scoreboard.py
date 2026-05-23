@@ -6,22 +6,29 @@ class Scoreboard(Entity):
         super().__init__()
         self.team_manager = team_manager
 
-        # "Team 1" corresponds to the blue team and "Team 2" to the red team.
-        # The colours of these labels will swap depending on which team is
-        # currently attacking in Search & Destroy.
         self.team1_text = Text(
-            text='Team 1: 0',
+            text='Blue: 0',
             position=window.top_left + Vec2(0.05, -0.05),
             origin=(-0.5, 0.5),
-            scale=1.25,
+            scale=1.4,
             color=color.azure,
+            background=True,
         )
         self.team2_text = Text(
-            text='Team 2: 0',
-            position=window.top_left + Vec2(0.05, -0.12),
+            text='Red: 0',
+            position=window.top_left + Vec2(0.05, -0.13),
             origin=(-0.5, 0.5),
-            scale=1.25,
+            scale=1.4,
             color=color.red,
+            background=True,
+        )
+        self.round_text = Text(
+            text='',
+            position=window.top + Vec2(0, -0.05),
+            origin=(0, 0.5),
+            scale=1.3,
+            color=color.white,
+            background=True,
         )
 
     def update(self):
@@ -29,16 +36,20 @@ class Scoreboard(Entity):
 
     def update_score(self):
         if search_destroy.sd_game:
-            team1_score = search_destroy.sd_game.blue_rounds
-            team2_score = search_destroy.sd_game.red_rounds
+            blue_score = search_destroy.sd_game.blue_rounds
+            red_score  = search_destroy.sd_game.red_rounds
+            limit      = search_destroy.sd_game.round_limit
+            round_num  = search_destroy.sd_game.rounds_played + 1
+            self.round_text.text = f'Round {round_num}  |  First to {limit}'
         else:
-            team1_score = sum(p.kills for p in self.team_manager.blue_team.players)
-            team2_score = sum(p.kills for p in self.team_manager.red_team.players)
+            blue_score = sum(p.kills for p in self.team_manager.blue_team.players)
+            red_score  = sum(p.kills for p in self.team_manager.red_team.players)
+            self.round_text.text = ''
 
-        self.team1_text.text = f'Team 1: {team1_score}'
-        self.team2_text.text = f'Team 2: {team2_score}'
+        self.team1_text.text = f'Blue  {blue_score}'
+        self.team2_text.text = f'Red   {red_score}'
 
-        # Update colours based on the current attacking team
+        # Attacking team label turns red (pressure indicator)
         if search_destroy.sd_game:
             if search_destroy.sd_game.attacking_team == self.team_manager.blue_team:
                 self.team1_text.color = color.red
