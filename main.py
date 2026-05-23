@@ -1,5 +1,4 @@
 from ursina import *
-from config import MAP_SIZE
 from map import create_map
 from teams import team_manager
 from scoreboard import Scoreboard
@@ -61,7 +60,7 @@ search_destroy.sd_game = SearchAndDestroyGame(team_manager)
 search_destroy.sd_game.start_round()
 
 def update():
-    if pause_menu.enabled:
+    if application.paused:
         return
     for player in team_manager.all_players:
         player.update()

@@ -168,8 +168,17 @@ class SearchAndDestroyGame:
         if self.bomb_planted:
             self.bomb_timer -= time.dt
             if self.bomb_timer_ui:
-                self.bomb_timer_ui.text = f'BOMB  {max(0, math.ceil(self.bomb_timer))}s'
-                self.bomb_timer_ui.color = color.red if self.bomb_timer > 10 else color.orange
+                remaining = max(0, math.ceil(self.bomb_timer))
+                self.bomb_timer_ui.text = f'BOMB  {remaining}s'
+                if self.bomb_timer > 10:
+                    self.bomb_timer_ui.color = color.red
+                    self.bomb_timer_ui.enabled = True
+                elif self.bomb_timer > 5:
+                    self.bomb_timer_ui.color = color.orange
+                    self.bomb_timer_ui.enabled = True
+                else:
+                    self.bomb_timer_ui.color = color.yellow
+                    self.bomb_timer_ui.enabled = int(self.bomb_timer * 4) % 2 == 0
             if self.bomb_timer <= 0:
                 self._explode_bomb()
                 self._award_round(self.planting_team)

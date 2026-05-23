@@ -1,8 +1,8 @@
 from ursina import *
 from gun import Gun
 from config import (
-    PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT, GRAVITY,
-    BOMB_PLANT_RADIUS, BOMB_DEFUSE_RADIUS,
+    PLAYER_SCALE, PLAYER_SPEED, SPRINT_SPEED, PLAYER_JUMP_HEIGHT, GRAVITY,
+    BOMB_PLANT_RADIUS, BOMB_DEFUSE_RADIUS, AMMO_CAPACITY,
 )
 import search_destroy
 from killfeed import kill_feed
@@ -67,9 +67,12 @@ class Player(Entity):
         self.velocity_y = 0
         self.on_ground = True
 
-        # AI obstacle avoidance state
+        # AI state
         self._avoid_dir = Vec3(1, 0, 0)
         self._strafe_timer = 0
+        self._evasion_timer = 0.0
+        self._evasion_dir = Vec3(1, 0, 0)
+        self._last_health = 100
 
         self.gun = Gun(player=self)
 
@@ -96,8 +99,17 @@ class Player(Entity):
                 scale=1.5,
                 color=color.white
             )
+            self.ammo_text = Text(
+                text=f'{AMMO_CAPACITY} / {AMMO_CAPACITY}',
+                parent=camera.ui,
+                position=window.bottom_right + Vec2(-0.05, 0.1),
+                origin=(1, 0),
+                scale=1.5,
+                color=color.white,
+            )
         else:
             self.bomb_indicator = None
+            self.ammo_text = None
 
     def update(self):
         if self.dead:
@@ -112,6 +124,13 @@ class Player(Entity):
             self._handle_input()
             if self.bomb_indicator:
                 self.bomb_indicator.text = 'You have the bomb  [4] to plant' if self.has_bomb else ''
+            if self.ammo_text:
+                if self.gun.reloading:
+                    self.ammo_text.text = 'RELOADING...'
+                    self.ammo_text.color = color.orange
+                else:
+                    self.ammo_text.text = f'{self.gun.ammo} / {AMMO_CAPACITY}'
+                    self.ammo_text.color = color.white if self.gun.ammo > 3 else color.red
         else:
             self._update_ai()
 
@@ -138,11 +157,15 @@ class Player(Entity):
         self.camera_pitch = max(min(self.camera_pitch, 60), -60)
         camera.rotation_x = self.camera_pitch
 
+        move_speed = SPRINT_SPEED if held_keys['shift'] and move.length() > 0 else PLAYER_SPEED
         move = self.forward * move.z + self.right * move.x
-        self.position += move * self.speed * time.dt
+        self.position += move * move_speed * time.dt
 
         if held_keys['space']:
             self.jump()
+
+        if held_keys['r']:
+            self.gun.reload()
 
         self.gun.aim_target = mouse.world_point if mouse.world_point else self.forward
         if mouse.left:
@@ -158,27 +181,37 @@ class Player(Entity):
             self.on_ground = False
 
     def _update_ai(self):
+        # Detect being hit — start evasion
+        if self.health < self._last_health and self.health > 0:
+            self._evasion_timer = random.uniform(0.4, 1.0)
+            self._evasion_dir = self.right if random.random() > 0.5 else -self.right
+        self._last_health = self.health
+
+        # Apply evasion (only when not already strafing around an obstacle)
+        if self._evasion_timer > 0 and self._strafe_timer <= 0:
+            self._evasion_timer -= time.dt
+            self.position += self._evasion_dir * self.speed * time.dt
+
         if search_destroy.sd_game:
             sd = search_destroy.sd_game
             is_attacker = self.team_color == sd.attacking_team.color
 
-            # Bomb carrier: move to nearest plant site and plant
+            # Bomb carrier: move to nearest site, plant, and shoot nearby enemies
             if self.has_bomb and sd.plant_sites:
-                nearest_site = min(
-                    sd.plant_sites,
-                    key=lambda s: distance(self.position, s.position)
-                )
+                nearest_site = min(sd.plant_sites, key=lambda s: distance(self.position, s.position))
                 self._ai_move_toward(nearest_site.position)
                 if distance(self.position, nearest_site.position) < BOMB_PLANT_RADIUS:
                     sd.handle_action(self)
+                self._ai_engage_nearby(range_limit=14)
                 self.gun.update()
                 return
 
-            # Defender: move toward planted bomb and defuse
+            # Defender: move toward planted bomb, defuse, and shoot nearby enemies
             if not is_attacker and sd.bomb_planted and sd.planted_bomb:
                 self._ai_move_toward(sd.planted_bomb.position)
                 if distance(self.position, sd.planted_bomb.position) < BOMB_DEFUSE_RADIUS:
                     sd.handle_action(self)
+                self._ai_engage_nearby(range_limit=20)
                 self.gun.update()
                 return
 
@@ -204,6 +237,18 @@ class Player(Entity):
             self.gun.shoot()
 
         self.gun.update()
+
+    def _ai_engage_nearby(self, range_limit=14):
+        """Shoot at nearest enemy within range without interrupting movement."""
+        enemies = [p for p in self.team_manager.get_opposing_players(self.team_color) if not p.dead]
+        if not enemies:
+            return
+        nearest = min(enemies, key=lambda p: distance(p.position, self.position))
+        if distance(nearest.position, self.position) < range_limit:
+            dx = nearest.position.x - self.position.x
+            dz = nearest.position.z - self.position.z
+            self.rotation_y = math.degrees(math.atan2(dx, dz))
+            self.gun.shoot()
 
     def _ai_move_toward(self, target):
         direction = target - self.position
@@ -291,5 +336,11 @@ class Player(Entity):
         self.has_bomb = False
         self.velocity_y = 0
         self.on_ground = True
+        self._last_health = 100
+        self._evasion_timer = 0.0
+        self.gun.reset()
         if self.bomb_indicator:
             self.bomb_indicator.text = ''
+        if self.ammo_text:
+            self.ammo_text.text = f'{AMMO_CAPACITY} / {AMMO_CAPACITY}'
+            self.ammo_text.color = color.white
