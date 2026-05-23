@@ -19,7 +19,9 @@ SPRINT_SPEED = 8
 CROUCH_HEIGHT = 0.5
 RELOAD_TIME = 1.5
 AMMO_CAPACITY = 10
-PLAYER_JUMP_HEIGHT = 2.5    # Adjust as needed for your game
+PLAYER_JUMP_HEIGHT = 8      # Initial vertical velocity applied on jump
+GRAVITY = -20               # Units per second squared
+FIRE_RATE = 0.25            # Seconds between shots
 
 # Bullet settings
 BULLET_SPEED = 20

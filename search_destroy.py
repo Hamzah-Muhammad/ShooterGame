@@ -1,14 +1,20 @@
-from ursina import Entity, Text, color, destroy, time, distance
+from ursina import Entity, Text, Button, Panel, color, destroy, time, distance, camera, application, mouse
 import math
 from config import (
     ROUND_LIMIT,
-    BOMB_SPAWN,
-    BOMB_SITE_B,
+    BOMB_SITES,
     BOMB_TIMER,
     BOMB_PICKUP_RADIUS,
     BOMB_PLANT_RADIUS,
     BOMB_DEFUSE_RADIUS,
 )
+
+SITE_COLORS = [
+    color.rgb(100, 255, 100),   # A - green
+    color.rgb(255, 180, 180),   # B - pink
+    color.rgb(100, 180, 255),   # C - blue
+]
+SITE_LABELS = ['A', 'B', 'C']
 
 
 class SearchAndDestroyGame:
@@ -26,33 +32,43 @@ class SearchAndDestroyGame:
         self.bomb_timer = 0
         self.bomb_planted = False
 
-        # Only site B is used for planting. Make it highly visible
-        self.plant_site = Entity(
-            model='cube',
-            color=color.rgb(255, 180, 180),
-            scale=3,
-            position=BOMB_SITE_B,
-        )
-        # Large translucent box to highlight the site
-        self.plant_highlight = Entity(
-            model='cube',
-            color=color.rgba(255, 0, 0, 80),
-            scale=6,
-            position=(BOMB_SITE_B[0], 0.05, BOMB_SITE_B[2]),
-        )
+        # One marker entity per bomb site — all three are live plant targets
+        self.plant_sites = []
+        for i, site in enumerate(BOMB_SITES):
+            marker = Entity(
+                model='cube',
+                color=SITE_COLORS[i],
+                scale=3,
+                position=site,
+            )
+            Entity(
+                model='cube',
+                color=color.rgba(255, 0, 0, 80),
+                scale=6,
+                position=(site[0], 0.05, site[2]),
+            )
+            Text(
+                text=SITE_LABELS[i],
+                position=(site[0], site[1] + 4, site[2]),
+                scale=15,
+                color=color.white,
+                origin=(0, 0),
+                world=True,
+            )
+            self.plant_sites.append(marker)
 
-        # The red team starts as the attackers
+        # Red team starts as attackers
         self.attacking_team = self.team_manager.red_team
         self.defending_team = self.team_manager.blue_team
         self.rounds_played = 0
         self.switch_message = None
+        self.win_screen = None
 
         # Countdown state for round start
         self.countdown_active = False
         self.countdown = 0
         self.countdown_text = None
 
-        # Ensure player colours match the current roles
         self.apply_team_colors()
 
     def start_round(self):
@@ -65,7 +81,6 @@ class SearchAndDestroyGame:
         if self.planted_bomb:
             destroy(self.planted_bomb)
 
-        # Spawn the bomb near the attacking team's spawn
         spawn_point = self.attacking_team.spawn_points[0]
         spawn_pos = (spawn_point[0], 1, spawn_point[2])
         self.bomb_entity = Entity(
@@ -77,20 +92,20 @@ class SearchAndDestroyGame:
         self.bomb_timer = 0
         self.bomb_planted = False
 
-        # Update player colours for the current roles
         self.apply_team_colors()
-
-        # Begin round countdown
         self.start_countdown()
 
     def on_player_death(self, player):
         """Check if a team has been eliminated after a death."""
-        team = self.team_manager.blue_team if player.team_color == self.team_manager.blue_team.color else self.team_manager.red_team
+        team = (
+            self.team_manager.blue_team
+            if player.team_color == self.team_manager.blue_team.color
+            else self.team_manager.red_team
+        )
         remaining = [p for p in team.players if not p.dead]
         if self.bomb_carrier == player and not self.bomb_planted:
             self.drop_bomb(player.position)
         if not remaining:
-            # Opposing team wins the round
             winner = self.team_manager.get_opposing_team(player.team_color)
             self._award_round(winner)
 
@@ -108,15 +123,14 @@ class SearchAndDestroyGame:
             )
             self.show_switch_message()
 
-        # Update colours whenever roles may have changed
         self.apply_team_colors()
 
-        if self.blue_rounds >= self.round_limit or self.red_rounds >= self.round_limit:
-            # Match over, reset scores
-            self.blue_rounds = 0
-            self.red_rounds = 0
-
-        self.start_round()
+        if self.blue_rounds >= self.round_limit:
+            self._show_match_over('Blue Team')
+        elif self.red_rounds >= self.round_limit:
+            self._show_match_over('Red Team')
+        else:
+            self.start_round()
 
     def update(self):
         """Update bomb logic each frame."""
@@ -151,25 +165,30 @@ class SearchAndDestroyGame:
         """Attempt to plant or defuse the bomb."""
         if player.dead:
             return
+
+        # Plant: carrier near any site
         if (
             player == self.bomb_carrier
             and not self.bomb_planted
             and player.team_color == self.attacking_team.color
-            and distance(player.position, self.plant_site.position)
-            < BOMB_PLANT_RADIUS
         ):
-            self.plant_bomb(player)
-        elif (
+            for site in self.plant_sites:
+                if distance(player.position, site.position) < BOMB_PLANT_RADIUS:
+                    self.plant_bomb(player, site.position)
+                    return
+
+        # Defuse: defender near planted bomb
+        if (
             self.bomb_planted
-            and distance(player.position, self.planted_bomb.position)
-            < BOMB_DEFUSE_RADIUS
+            and self.planted_bomb
+            and distance(player.position, self.planted_bomb.position) < BOMB_DEFUSE_RADIUS
             and player.team_color != self.planting_team.color
         ):
             self.defuse_bomb(player)
 
-    def plant_bomb(self, player):
+    def plant_bomb(self, player, position):
         self.planted_bomb = Entity(
-            model='cube', color=color.black, scale=0.5, position=self.plant_site.position
+            model='cube', color=color.black, scale=0.5, position=position
         )
         self.bomb_planted = True
         self.planting_team = self.attacking_team
@@ -186,14 +205,13 @@ class SearchAndDestroyGame:
     def drop_bomb(self, position):
         if self.bomb_entity or self.bomb_planted:
             return
-        self.bomb_entity = Entity(model='cube', color=color.black, scale=0.5, position=position)
+        self.bomb_entity = Entity(
+            model='cube', color=color.black, scale=0.5, position=position
+        )
         self.bomb_carrier = None
 
     def apply_team_colors(self):
         """Color attacking team red and defenders blue."""
-        # Update the team objects' colour attributes so helper methods that rely
-        # on these values (like TeamManager.get_opposing_team) continue to work
-        # after sides switch.
         self.attacking_team.color = color.red
         self.defending_team.color = color.azure
         for p in self.attacking_team.players:
@@ -204,11 +222,10 @@ class SearchAndDestroyGame:
             p.team_color = color.azure
 
     def show_switch_message(self):
-        """Display a temporary message when teams switch roles."""
         if self.switch_message:
             destroy(self.switch_message)
         self.switch_message = Text(
-            text="Sides switched!",
+            text='Sides switched!',
             origin=(0, 0),
             scale=2,
             background=True,
@@ -217,7 +234,6 @@ class SearchAndDestroyGame:
         destroy(self.switch_message, delay=3)
 
     def start_countdown(self, seconds: int = 3):
-        """Display a countdown before the round starts."""
         if self.countdown_text:
             destroy(self.countdown_text)
         self.countdown = seconds
@@ -230,6 +246,62 @@ class SearchAndDestroyGame:
             color=color.white,
         )
 
+    def _show_match_over(self, winner_name):
+        application.paused = True
+        mouse.locked = False
+
+        self.win_screen = Entity(parent=camera.ui, ignore_paused=True)
+        Panel(
+            parent=self.win_screen,
+            scale=(0.55, 0.4),
+            color=color.rgba(0, 0, 0, 200),
+            ignore_paused=True,
+        )
+        Text(
+            text=f'{winner_name} wins the match!',
+            parent=self.win_screen,
+            position=(0, 0.12),
+            origin=(0, 0),
+            scale=2,
+            color=color.white,
+            ignore_paused=True,
+        )
+        Text(
+            text=f'Blue: {self.blue_rounds}  |  Red: {self.red_rounds}',
+            parent=self.win_screen,
+            position=(0, 0.04),
+            origin=(0, 0),
+            scale=1.2,
+            color=color.light_gray,
+            ignore_paused=True,
+        )
+        Button(
+            text='Play Again',
+            parent=self.win_screen,
+            position=(0, -0.06),
+            scale=(0.25, 0.06),
+            on_click=self._restart_match,
+            ignore_paused=True,
+        )
+        Button(
+            text='Quit',
+            parent=self.win_screen,
+            position=(0, -0.15),
+            scale=(0.25, 0.06),
+            on_click=application.quit,
+            ignore_paused=True,
+        )
+
+    def _restart_match(self):
+        if self.win_screen:
+            destroy(self.win_screen)
+            self.win_screen = None
+        self.blue_rounds = 0
+        self.red_rounds = 0
+        self.rounds_played = 0
+        application.paused = False
+        mouse.locked = True
+        self.start_round()
 
 
 # Global instance used throughout the game
