@@ -4,7 +4,7 @@ from ursina import color
 PLAYER_SCALE = 1.5
 # Size of the square map.  This is used for ground generation
 # and to position spawn points near the edges.
-MAP_SIZE = 100
+MAP_SIZE = 400
 SCORE_LIMIT = 10
 
 # Search & Destroy settings
@@ -19,12 +19,25 @@ SPRINT_SPEED = 8
 CROUCH_HEIGHT = 0.5
 RELOAD_TIME = 1.5
 AMMO_CAPACITY = 10
-PLAYER_JUMP_HEIGHT = 2.5    # Adjust as needed for your game
+PLAYER_JUMP_HEIGHT = 8      # Initial vertical velocity applied on jump
+GRAVITY = -20               # Units per second squared
+FIRE_RATE = 0.25            # Seconds between shots
 
 # Bullet settings
 BULLET_SPEED = 20
 BULLET_LIFETIME = 3
 BULLET_DAMAGE = 25
+
+# Bomb settings
+BOMB_SPAWN = (0, 1, 0)
+BOMB_SITE_A = (-120, 1, 120)
+BOMB_SITE_B = (120, 1, 120)
+BOMB_SITE_C = (0, 1, -120)
+BOMB_SITES = [BOMB_SITE_A, BOMB_SITE_B, BOMB_SITE_C]
+BOMB_TIMER = 40  # seconds until explosion after planting
+BOMB_PICKUP_RADIUS = 1.5
+BOMB_PLANT_RADIUS = 2
+BOMB_DEFUSE_RADIUS = 2
 
 # Colors
 TEAM_COLORS = {

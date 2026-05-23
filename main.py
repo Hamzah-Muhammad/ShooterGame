@@ -9,48 +9,63 @@ import search_destroy
 app = Ursina()
 
 window.title = 'ShooterGame'
-window.borderless = False
+window.borderless = True
+window.fullscreen = True
 window.exit_button.visible = False
 window.fps_counter.enabled = True
 window.color = color.black
-window.size = (1280, 720)
+window.size = (1920, 1080)
 
 create_map()
 
 team_manager.spawn_teams()
 scoreboard = Scoreboard(team_manager)
 
-# Pause menu setup
+# Pause menu — ignore_paused=True so it stays visible when application.paused
+pause_menu = Entity(parent=camera.ui, enabled=False, ignore_paused=True)
+Panel(
+    parent=pause_menu,
+    scale=(0.4, 0.3),
+    color=color.rgba(0, 0, 0, 150),
+    ignore_paused=True,
+)
+Button(
+    text='Resume',
+    parent=pause_menu,
+    position=(0, 0.05),
+    on_click=lambda: toggle_menu(False),
+    ignore_paused=True,
+)
+Button(
+    text='Close Game',
+    parent=pause_menu,
+    position=(0, -0.05),
+    on_click=application.quit,
+    ignore_paused=True,
+)
 
-class PauseMenu(Entity):
-    """Simple pause menu with Resume and Close Game buttons."""
+def toggle_menu(show=None):
+    if show is None:
+        pause_menu.enabled = not pause_menu.enabled
+    else:
+        pause_menu.enabled = show
+    mouse.locked = not pause_menu.enabled
+    application.paused = pause_menu.enabled
 
-    def __init__(self):
-        super().__init__(parent=camera.ui, enabled=False)
-        self.panel = Panel(scale=(0.4, 0.3), model='quad', color=color.gray, parent=self)
-        self.resume_button = Button(text='Resume', scale=(0.3, 0.1), position=(0, 0.05), parent=self)
-        self.resume_button.on_click = self.resume
-        self.quit_button = Button(text='Close Game', color=color.red, scale=(0.3, 0.1), position=(0, -0.05), parent=self)
-        self.quit_button.on_click = application.quit
-
-    def resume(self):
-        self.disable()
-        mouse.locked = True
-
-pause_menu = PauseMenu()
+def input(key):
+    if key == 'escape':
+        toggle_menu()
 
 # Initialize Search & Destroy game mode
 search_destroy.sd_game = SearchAndDestroyGame(team_manager)
 search_destroy.sd_game.start_round()
 
 def update():
+    if pause_menu.enabled:
+        return
     for player in team_manager.all_players:
         player.update()
     scoreboard.update()
-
-def input(key):
-    if key == 'escape':
-        pause_menu.enabled = not pause_menu.enabled
-        mouse.locked = not pause_menu.enabled
+    search_destroy.sd_game.update()
 
 app.run()

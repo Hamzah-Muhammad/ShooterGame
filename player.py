@@ -1,8 +1,12 @@
 from ursina import *
 from gun import Gun
-from config import PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT
+from config import (
+    PLAYER_SCALE, PLAYER_SPEED, PLAYER_JUMP_HEIGHT, GRAVITY,
+    BOMB_PLANT_RADIUS, BOMB_DEFUSE_RADIUS,
+)
 import search_destroy
 import math
+import random
 
 class Player(Entity):
     def __init__(self, team_color=color.white, spawn_point=(0, 1, 0), is_local=False, name="Player", team_manager=None, **kwargs):
@@ -18,7 +22,7 @@ class Player(Entity):
         self.enabled = True
         self.visible = True
 
-        self.spawn_point = Vec3(spawn_point[0], 1, spawn_point[2])  # ensure above ground
+        self.spawn_point = Vec3(spawn_point[0], 1, spawn_point[2])
         self.team_color = team_color
         self.name_text = Text(
             text=name,
@@ -40,7 +44,6 @@ class Player(Entity):
             always_on_top=True
         )
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
-        # Separate hitbox entity for more reliable bullet collisions
         self.hitbox = Entity(
             parent=self,
             model='cube',
@@ -51,21 +54,29 @@ class Player(Entity):
         )
 
         self.speed = PLAYER_SPEED
-        self.jump_height = PLAYER_JUMP_HEIGHT  # unused now, no gravity
+        self.jump_height = PLAYER_JUMP_HEIGHT
         self.kills = 0
         self.dead = False
         self.team_manager = team_manager
         self.is_local = is_local
+        self.has_bomb = False
+
+        # Gravity state
+        self.velocity_y = 0
+        self.on_ground = True
+
+        # AI obstacle avoidance state
+        self._avoid_dir = Vec3(1, 0, 0)
+        self._strafe_timer = 0
 
         self.gun = Gun(player=self)
 
         if self.is_local:
             camera.parent = self
-            camera.position = (0, 2, 1)  # zoomed out a bit more
+            camera.position = (0, 2, 1)
             camera.rotation = (10, 0, 0)
             self.camera_pitch = camera.rotation_x
             mouse.locked = True
-            # add small yellow dot crosshair at the center of the screen
             self.crosshair = Entity(
                 parent=camera.ui,
                 model='quad',
@@ -75,15 +86,43 @@ class Player(Entity):
                 position=Vec2(0, 0),
                 enabled=True
             )
+            self.bomb_indicator = Text(
+                text='',
+                parent=camera.ui,
+                position=window.bottom_left + Vec2(0.05, 0.1),
+                origin=(0, 0),
+                scale=1.5,
+                color=color.white
+            )
+        else:
+            self.bomb_indicator = None
 
     def update(self):
         if self.dead:
             return
 
+        self._apply_gravity()
+
+        if search_destroy.sd_game and search_destroy.sd_game.countdown_active:
+            return
+
         if self.is_local:
             self._handle_input()
+            if self.bomb_indicator:
+                self.bomb_indicator.text = 'You have the bomb  [4] to plant' if self.has_bomb else ''
         else:
             self._update_ai()
+
+    def _apply_gravity(self):
+        if not self.on_ground:
+            self.velocity_y += GRAVITY * time.dt
+        self.y += self.velocity_y * time.dt
+        if self.y <= 1:
+            self.y = 1
+            self.velocity_y = 0
+            self.on_ground = True
+        else:
+            self.on_ground = False
 
     def _handle_input(self):
         move = Vec3(
@@ -108,18 +147,46 @@ class Player(Entity):
             self.gun.shoot()
         self.gun.update()
 
+        if held_keys['4'] and search_destroy.sd_game:
+            search_destroy.sd_game.handle_action(self)
+
     def jump(self):
-        pass  # Gravity is disabled
+        if self.on_ground:
+            self.velocity_y = self.jump_height
+            self.on_ground = False
 
     def _update_ai(self):
+        if search_destroy.sd_game:
+            sd = search_destroy.sd_game
+            is_attacker = self.team_color == sd.attacking_team.color
+
+            # Bomb carrier: move to nearest plant site and plant
+            if self.has_bomb and sd.plant_sites:
+                nearest_site = min(
+                    sd.plant_sites,
+                    key=lambda s: distance(self.position, s.position)
+                )
+                self._ai_move_toward(nearest_site.position)
+                if distance(self.position, nearest_site.position) < BOMB_PLANT_RADIUS:
+                    sd.handle_action(self)
+                self.gun.update()
+                return
+
+            # Defender: move toward planted bomb and defuse
+            if not is_attacker and sd.bomb_planted and sd.planted_bomb:
+                self._ai_move_toward(sd.planted_bomb.position)
+                if distance(self.position, sd.planted_bomb.position) < BOMB_DEFUSE_RADIUS:
+                    sd.handle_action(self)
+                self.gun.update()
+                return
+
+        # Default: find and engage nearest enemy
         enemies = [p for p in self.team_manager.get_opposing_players(self.team_color) if not p.dead]
         if not enemies:
             self.gun.update()
             return
 
         nearest = min(enemies, key=lambda p: distance(p.position, self.position))
-
-        # Vector toward the nearest enemy on the XZ plane
         direction = nearest.position - self.position
         direction.y = 0
         dist = direction.length()
@@ -127,17 +194,41 @@ class Player(Entity):
         if dist > 0:
             self.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
 
-        # Move toward the enemy if far enough away
         if dist > 3:
-            self.position += direction.normalized() * self.speed * time.dt
+            self._ai_move_toward(nearest.position)
 
-        # Shoot when within range
         if dist < 20:
             self.gun.aim_target = nearest.position
-            if not self.gun.bullet:
-                self.gun.shoot()
+            self.gun.shoot()
 
         self.gun.update()
+
+    def _ai_move_toward(self, target):
+        direction = target - self.position
+        direction.y = 0
+        dist = direction.length()
+        if dist < 0.5:
+            return
+
+        direction = direction.normalized()
+        self.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
+
+        ray = raycast(
+            self.world_position + Vec3(0, 1, 0),
+            direction,
+            distance=3,
+            ignore=[self, self.hitbox]
+        )
+        if ray.hit:
+            if self._strafe_timer <= 0:
+                perp = Vec3(-direction.z, 0, direction.x).normalized()
+                self._avoid_dir = perp if random.random() > 0.5 else -perp
+                self._strafe_timer = random.uniform(0.5, 1.5)
+            self._strafe_timer -= time.dt
+            self.position += self._avoid_dir * self.speed * time.dt
+        else:
+            self._strafe_timer = 0
+            self.position += direction * self.speed * time.dt
 
     def take_damage(self, amount, attacker=None):
         if self.dead:
@@ -159,6 +250,11 @@ class Player(Entity):
         self.visible = False
         self.collider = None
         self.hitbox.enabled = False
+        if self.has_bomb and search_destroy.sd_game:
+            search_destroy.sd_game.drop_bomb(self.position)
+            self.has_bomb = False
+        if self.bomb_indicator:
+            self.bomb_indicator.text = ''
         if search_destroy.sd_game:
             search_destroy.sd_game.on_player_death(self)
         else:
@@ -173,3 +269,8 @@ class Player(Entity):
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
         self.hitbox.enabled = True
         self.health_bar.scale_x = 1
+        self.has_bomb = False
+        self.velocity_y = 0
+        self.on_ground = True
+        if self.bomb_indicator:
+            self.bomb_indicator.text = ''

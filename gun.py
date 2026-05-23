@@ -1,5 +1,5 @@
 from ursina import *
-from config import BULLET_SPEED, BULLET_LIFETIME, BULLET_DAMAGE
+from config import BULLET_SPEED, BULLET_LIFETIME, BULLET_DAMAGE, FIRE_RATE
 
 class Gun(Entity):
     def __init__(self, player, **kwargs):
@@ -13,17 +13,18 @@ class Gun(Entity):
             **kwargs
         )
         self.player = player
-        self.bullet = None
-        self.bullet_timer = 0
+        self.bullets = []
+        self.fire_cooldown = 0
 
     def shoot(self):
-        if self.bullet:
-            return  # Only one bullet at a time for now
+        if self.fire_cooldown > 0:
+            return
 
         direction = self.forward
         if self.player.is_local:
             direction = camera.forward
-        self.bullet = Entity(
+
+        bullet = Entity(
             model='sphere',
             color=color.yellow,
             scale=0.1,
@@ -33,28 +34,30 @@ class Gun(Entity):
             life=BULLET_LIFETIME,
             collider='sphere'
         )
+        self.bullets.append(bullet)
+        self.fire_cooldown = FIRE_RATE
 
     def update(self):
-        self.update_bullet()
+        self.fire_cooldown = max(0, self.fire_cooldown - time.dt)
+        self._update_bullets()
 
-    def update_bullet(self):
-        if not self.bullet:
-            return
+    def _update_bullets(self):
+        for bullet in self.bullets[:]:
+            bullet.position += bullet.direction * bullet.speed * time.dt
+            bullet.life -= time.dt
 
-        self.bullet.position += self.bullet.direction * self.bullet.speed * time.dt
-        self.bullet.life -= time.dt
-
-        if self.bullet.life <= 0:
-            destroy(self.bullet)
-            self.bullet = None
-            return
-
-        # Check hit against each opposing player's hitbox
-        for player in self.player.team_manager.get_opposing_players(self.player.team_color):
-            if player.dead:
+            if bullet.life <= 0:
+                destroy(bullet)
+                self.bullets.remove(bullet)
                 continue
-            if self.bullet.intersects(player.hitbox).hit:
-                player.take_damage(BULLET_DAMAGE, attacker=self.player)
-                destroy(self.bullet)
-                self.bullet = None
-                break
+
+            hit = False
+            for player in self.player.team_manager.get_opposing_players(self.player.team_color):
+                if player.dead:
+                    continue
+                if bullet.intersects(player.hitbox).hit:
+                    player.take_damage(BULLET_DAMAGE, attacker=self.player)
+                    destroy(bullet)
+                    self.bullets.remove(bullet)
+                    hit = True
+                    break

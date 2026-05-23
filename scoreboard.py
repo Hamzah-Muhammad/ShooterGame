@@ -6,19 +6,22 @@ class Scoreboard(Entity):
         super().__init__()
         self.team_manager = team_manager
 
-        self.blue_text = Text(
-            text='Blue: 0',
+        # "Team 1" corresponds to the blue team and "Team 2" to the red team.
+        # The colours of these labels will swap depending on which team is
+        # currently attacking in Search & Destroy.
+        self.team1_text = Text(
+            text='Team 1: 0',
             position=window.top_left + Vec2(0.05, -0.05),
-            origin=(0, 0),
-            scale=1.5,
-            color=color.azure
+            origin=(-0.5, 0.5),
+            scale=1.25,
+            color=color.azure,
         )
-        self.red_text = Text(
-            text='Red: 0',
+        self.team2_text = Text(
+            text='Team 2: 0',
             position=window.top_left + Vec2(0.05, -0.12),
-            origin=(0, 0),
-            scale=1.5,
-            color=color.red
+            origin=(-0.5, 0.5),
+            scale=1.25,
+            color=color.red,
         )
 
     def update(self):
@@ -26,10 +29,20 @@ class Scoreboard(Entity):
 
     def update_score(self):
         if search_destroy.sd_game:
-            self.blue_text.text = f"Blue: {search_destroy.sd_game.blue_rounds}"
-            self.red_text.text = f"Red: {search_destroy.sd_game.red_rounds}"
+            team1_score = search_destroy.sd_game.blue_rounds
+            team2_score = search_destroy.sd_game.red_rounds
         else:
-            blue_kills = sum([p.kills for p in self.team_manager.blue_team.players])
-            red_kills = sum([p.kills for p in self.team_manager.red_team.players])
-            self.blue_text.text = f'Blue: {blue_kills}'
-            self.red_text.text = f'Red: {red_kills}'
+            team1_score = sum(p.kills for p in self.team_manager.blue_team.players)
+            team2_score = sum(p.kills for p in self.team_manager.red_team.players)
+
+        self.team1_text.text = f'Team 1: {team1_score}'
+        self.team2_text.text = f'Team 2: {team2_score}'
+
+        # Update colours based on the current attacking team
+        if search_destroy.sd_game:
+            if search_destroy.sd_game.attacking_team == self.team_manager.blue_team:
+                self.team1_text.color = color.red
+                self.team2_text.color = color.azure
+            else:
+                self.team1_text.color = color.azure
+                self.team2_text.color = color.red
