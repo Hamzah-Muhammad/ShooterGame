@@ -1,6 +1,6 @@
 from ursina import *
 from config import (
-    BULLET_DAMAGE, FIRE_RATE, AMMO_CAPACITY, RELOAD_TIME,
+    BULLET_DAMAGE, HEADSHOT_MULTIPLIER, FIRE_RATE, AMMO_CAPACITY, RELOAD_TIME,
     BULLET_BASE_SPREAD, BULLET_MOVE_SPREAD,
     BULLET_RECOIL_PER_SHOT, BULLET_RECOIL_MAX, BULLET_RECOIL_RECOVERY,
     AI_EXTRA_SPREAD, CROUCH_SPREAD_MULT,
@@ -42,8 +42,8 @@ class Gun(Entity):
         if angle_deg < 0.001:
             return base_dir
         angle_rad = math.radians(angle_deg)
-        cone_angle = random.uniform(0, angle_rad)
-        roll = random.uniform(0, 2 * math.pi)
+        theta = random.uniform(0, angle_rad)
+        phi = random.uniform(0, 2 * math.pi)
 
         # Build a perpendicular frame around base_dir
         if abs(base_dir.x) < 0.9:
@@ -52,8 +52,9 @@ class Gun(Entity):
             right = base_dir.cross(Vec3(0, 1, 0)).normalized()
         up = right.cross(base_dir).normalized()
 
-        offset = right * math.sin(cone_angle) * math.cos(roll) + up * math.sin(cone_angle) * math.sin(roll)
-        return (base_dir + offset * math.tan(cone_angle)).normalized()
+        # Spherical-cap sample: rotate base_dir by theta around a random axis in the perp plane
+        perp = right * math.cos(phi) + up * math.sin(phi)
+        return (base_dir * math.cos(theta) + perp * math.sin(theta)).normalized()
 
     def shoot(self):
         if self.fire_cooldown > 0 or self.ammo <= 0 or self.reloading:
@@ -69,22 +70,22 @@ class Gun(Entity):
         spread = self._get_spread_deg()
         direction = self._spread_direction(base_dir, spread)
 
-        # Hitscan raycast — ignore own entity and hitbox
+        # Hitscan raycast — ignore own entity and both hitboxes
         ray = raycast(
             origin,
             direction,
             distance=500,
-            ignore=[self.player, self.player.hitbox, self],
+            ignore=[self.player, self.player.body_hitbox, self.player.head_hitbox, self],
         )
 
         if ray.hit and ray.entity:
             target = getattr(ray.entity, 'owner', None)
-            if target is None and hasattr(ray.entity, 'take_damage'):
-                target = ray.entity
+            is_head = getattr(ray.entity, 'is_head', False)
             if target and not getattr(target, 'dead', True):
                 opposing = self.player.team_manager.get_opposing_players(self.player.team_color)
                 if target in opposing:
-                    target.take_damage(BULLET_DAMAGE, attacker=self.player)
+                    dmg = BULLET_DAMAGE * (HEADSHOT_MULTIPLIER if is_head else 1.0)
+                    target.take_damage(dmg, attacker=self.player, headshot=is_head)
 
         # Visual tracer
         tracer_end = origin + direction * (ray.distance if ray.hit else 200)

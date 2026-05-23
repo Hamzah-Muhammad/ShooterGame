@@ -192,12 +192,12 @@ def create_map():
     # Mid-east cluster
     _create_house( 140,  35,  width=10, depth=8,  wall_h=4.0, rotation_y=180)
     _create_house( 165,  58,  width=9,  depth=8,  wall_h=3.5, rotation_y=90)
-    # South pair (near blue spawn corridor, add visual interest)
-    _create_house( -55, -150, width=9,  depth=8,  wall_h=3.5, rotation_y=45)
-    _create_house(  55, -150, width=9,  depth=8,  wall_h=3.5, rotation_y=315)
-    # North pair (near red spawn corridor)
-    _create_house( -60,  155, width=9,  depth=8,  wall_h=3.5, rotation_y=225)
-    _create_house(  60,  155, width=9,  depth=8,  wall_h=3.5, rotation_y=135)
+    # South pair (pulled away from blue spawn corridor at z=-160)
+    _create_house( -55, -130, width=9,  depth=8,  wall_h=3.5, rotation_y=45)
+    _create_house(  55, -130, width=9,  depth=8,  wall_h=3.5, rotation_y=315)
+    # North pair (pulled away from red spawn corridor at z=+160)
+    _create_house( -60,  130, width=9,  depth=8,  wall_h=3.5, rotation_y=225)
+    _create_house(  60,  130, width=9,  depth=8,  wall_h=3.5, rotation_y=135)
 
     # ── Fences ────────────────────────────────────────────────────────────────
     # NW cluster — two horizontal runs
@@ -212,11 +212,11 @@ def create_map():
     # Mid-east cluster
     _fence( 112,  22,  188,  22)
     _fence( 112,  70,  188,  70)
-    # Decorative side fences around south/north houses
-    _fence( -80, -142, -80, -162)
-    _fence(  80, -142,  80, -162)
-    _fence( -80,  142, -80,  162)
-    _fence(  80,  142,  80,  162)
+    # Decorative side fences around south/north houses (matches moved houses)
+    _fence( -80, -122, -80, -142)
+    _fence(  80, -122,  80, -142)
+    _fence( -80,  122, -80,  142)
+    _fence(  80,  122,  80,  142)
 
     # ── Stone cover walls (mid-map tactical) ──────────────────────────────────
     _wall(   0,  30, 12, ry=0)
@@ -249,12 +249,12 @@ def create_map():
         _create_tree(random.uniform(-192, -110), random.uniform(18, 72))
     for _ in range(8):
         _create_tree(random.uniform( 110,  192), random.uniform(18, 72))
-    # Near south/north lone houses
+    # Near south/north lone houses (matches moved houses)
     for _ in range(6):
-        _create_tree(random.uniform(-90, -20), random.uniform(-165, -135))
-        _create_tree(random.uniform( 20,  90), random.uniform(-165, -135))
-        _create_tree(random.uniform(-90, -20), random.uniform( 135,  165))
-        _create_tree(random.uniform( 20,  90), random.uniform( 135,  165))
+        _create_tree(random.uniform(-90, -20), random.uniform(-145, -115))
+        _create_tree(random.uniform( 20,  90), random.uniform(-145, -115))
+        _create_tree(random.uniform(-90, -20), random.uniform( 115,  145))
+        _create_tree(random.uniform( 20,  90), random.uniform( 115,  145))
     # General scatter — avoid the core combat zone
     for _ in range(40):
         px = random.uniform(-half+5, half-5)

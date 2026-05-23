@@ -8,9 +8,12 @@ from config import (
     BOMB_PICKUP_RADIUS,
     BOMB_PLANT_RADIUS,
     BOMB_DEFUSE_RADIUS,
+    BOMB_BLAST_RADIUS,
+    BOMB_BLAST_DAMAGE,
     ROUND_TIME,
     PLANT_TIME,
     DEFUSE_TIME,
+    ROUND_OVER_DURATION,
 )
 
 SITE_COLORS = [
@@ -72,6 +75,12 @@ class SearchAndDestroyGame:
         self.countdown = 0
         self.countdown_text = None
 
+        # Round-over banner state
+        self.round_over_active = False
+        self.round_over_timer = 0.0
+        self.round_over_text = None
+        self.pending_winner = None
+
         # Round timer
         self.round_time_left = ROUND_TIME
 
@@ -85,6 +94,7 @@ class SearchAndDestroyGame:
         # Action progress HUD (only local player sees it — camera.ui)
         self.action_label = Text(
             text='',
+            parent=camera.ui,
             position=(0, -0.40),
             origin=(0, 0),
             scale=2,
@@ -159,12 +169,42 @@ class SearchAndDestroyGame:
             self._award_round(winner)
 
     def _award_round(self, team):
+        # Guard against double-award (e.g. bomb-explosion damage wiping CTs after the explicit award call)
+        if self.round_over_active:
+            return
+
         if team == self.team_manager.blue_team:
             self.blue_rounds += 1
         else:
             self.red_rounds += 1
 
         self.rounds_played += 1
+        self.pending_winner = team
+
+        # Show banner; transition logic runs after ROUND_OVER_DURATION
+        self.round_over_active = True
+        self.round_over_timer = ROUND_OVER_DURATION
+        self._reset_action()
+
+        team_name = 'BLUE' if team == self.team_manager.blue_team else 'RED'
+        banner_color = color.azure if team == self.team_manager.blue_team else color.red
+        if self.round_over_text:
+            destroy(self.round_over_text)
+        self.round_over_text = Text(
+            text=f'{team_name} WINS THE ROUND',
+            parent=camera.ui,
+            origin=(0, 0),
+            scale=3,
+            background=True,
+            color=banner_color,
+            position=(0, 0.1),
+        )
+
+    def _advance_after_round_over(self):
+        if self.round_over_text:
+            destroy(self.round_over_text)
+            self.round_over_text = None
+
         if self.rounds_played % 2 == 0:
             self.attacking_team, self.defending_team = (
                 self.defending_team,
@@ -191,6 +231,14 @@ class SearchAndDestroyGame:
                 self.countdown_active = False
                 destroy(self.countdown_text)
                 self.countdown_text = None
+            return
+
+        # Round-over banner — freeze game logic, advance after duration
+        if self.round_over_active:
+            self.round_over_timer -= time.dt
+            if self.round_over_timer <= 0:
+                self.round_over_active = False
+                self._advance_after_round_over()
             return
 
         # Round timer — only counts down before bomb is planted
@@ -228,8 +276,9 @@ class SearchAndDestroyGame:
                     self.bomb_timer_ui.color = color.yellow
                     self.bomb_timer_ui.enabled = int(self.bomb_timer * 4) % 2 == 0
             if self.bomb_timer <= 0:
-                self._explode_bomb()
+                # Award first so round_over_active guards the on_player_death cascade
                 self._award_round(self.planting_team)
+                self._explode_bomb()
                 return
 
         # Cancel action if handle_action wasn't called this frame
@@ -390,6 +439,15 @@ class SearchAndDestroyGame:
             return
         pos = Vec3(self.planted_bomb.position)
 
+        # Damage everyone in blast radius — linear falloff
+        for p in self.team_manager.all_players:
+            if p.dead:
+                continue
+            d = distance(p.position, pos)
+            if d < BOMB_BLAST_RADIUS:
+                dmg = BOMB_BLAST_DAMAGE * (1.0 - d / BOMB_BLAST_RADIUS)
+                p.take_damage(dmg, attacker=None)
+
         blast_colors = [color.orange, color.yellow, color.rgb(255, 80, 0)]
         for i in range(20):
             p = Entity(
@@ -421,6 +479,15 @@ class SearchAndDestroyGame:
     def _show_match_over(self, winner_name):
         application.paused = True
         mouse.locked = False
+
+        # Clean up any leftover round-over / action HUD before the win panel
+        self._reset_action()
+        if self.round_over_text:
+            destroy(self.round_over_text)
+            self.round_over_text = None
+        if self.bomb_timer_ui:
+            destroy(self.bomb_timer_ui)
+            self.bomb_timer_ui = None
 
         self.win_screen = Entity(parent=camera.ui, ignore_paused=True)
         Panel(
@@ -471,6 +538,9 @@ class SearchAndDestroyGame:
         self.blue_rounds = 0
         self.red_rounds = 0
         self.rounds_played = 0
+        self.round_over_active = False
+        self.round_over_timer = 0.0
+        self.pending_winner = None
         application.paused = False
         mouse.locked = True
         self.start_round()

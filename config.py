@@ -22,6 +22,7 @@ FIRE_RATE = 0.1          # seconds between shots (10 rps — CS-like auto rate)
 
 # Bullet / hitscan settings
 BULLET_DAMAGE = 25
+HEADSHOT_MULTIPLIER = 4.0     # damage multiplier on head hits
 BULLET_BASE_SPREAD = 0.5      # degrees — standing still, not shooting
 BULLET_MOVE_SPREAD = 5.0      # degrees added when moving
 BULLET_RECOIL_PER_SHOT = 1.0  # degrees of recoil added per shot fired
@@ -39,6 +40,9 @@ BOMB_TIMER = 40
 BOMB_PICKUP_RADIUS = 1.5
 BOMB_PLANT_RADIUS = 2
 BOMB_DEFUSE_RADIUS = 2
+BOMB_BLAST_RADIUS = 18        # explosion damage radius (units)
+BOMB_BLAST_DAMAGE = 250       # max damage at center; linear falloff to 0 at radius
+ROUND_OVER_DURATION = 3.0     # seconds banner shown between rounds
 
 # Colors
 TEAM_COLORS = {

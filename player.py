@@ -48,15 +48,30 @@ class Player(Entity):
             always_on_top=True
         )
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
-        self.hitbox = Entity(
+        # Body hitbox — torso + legs
+        self.body_hitbox = Entity(
             parent=self,
             model='cube',
-            scale=Vec3(1, 2, 1),
-            position=Vec3(0, 1, 0),
+            scale=Vec3(1, 1.6, 1),
+            position=Vec3(0, 0.8, 0),
             collider='box',
-            visible=False
+            visible=False,
         )
-        self.hitbox.owner = self
+        self.body_hitbox.owner = self
+        self.body_hitbox.is_head = False
+        # Head hitbox — smaller, on top
+        self.head_hitbox = Entity(
+            parent=self,
+            model='cube',
+            scale=Vec3(0.55, 0.4, 0.55),
+            position=Vec3(0, 1.8, 0),
+            collider='box',
+            visible=False,
+        )
+        self.head_hitbox.owner = self
+        self.head_hitbox.is_head = True
+        # Back-compat alias for any external refs
+        self.hitbox = self.body_hitbox
 
         self.speed = PLAYER_SPEED
         self.jump_height = PLAYER_JUMP_HEIGHT
@@ -130,8 +145,11 @@ class Player(Entity):
             return
 
         self._apply_gravity()
+        self._update_hitbox_pose()
 
-        if search_destroy.sd_game and search_destroy.sd_game.countdown_active:
+        if search_destroy.sd_game and (
+            search_destroy.sd_game.countdown_active or search_destroy.sd_game.round_over_active
+        ):
             return
 
         if self.is_local:
@@ -156,6 +174,19 @@ class Player(Entity):
                     self.health_text.color = color.red
         else:
             self._update_ai()
+
+    def _update_hitbox_pose(self):
+        """Shrink hitboxes when crouching so crouch is mechanically real, not just visual."""
+        if self.is_crouching:
+            self.body_hitbox.scale = Vec3(1, 1.0, 1)
+            self.body_hitbox.position = Vec3(0, 0.5, 0)
+            self.head_hitbox.scale = Vec3(0.55, 0.35, 0.55)
+            self.head_hitbox.position = Vec3(0, 1.2, 0)
+        else:
+            self.body_hitbox.scale = Vec3(1, 1.6, 1)
+            self.body_hitbox.position = Vec3(0, 0.8, 0)
+            self.head_hitbox.scale = Vec3(0.55, 0.4, 0.55)
+            self.head_hitbox.position = Vec3(0, 1.8, 0)
 
     def _apply_gravity(self):
         if not self.on_ground:
@@ -302,7 +333,7 @@ class Player(Entity):
             self.world_position + Vec3(0, 1, 0),
             direction,
             distance=3,
-            ignore=[self, self.hitbox]
+            ignore=[self, self.body_hitbox, self.head_hitbox]
         )
         if ray.hit:
             if self._strafe_timer <= 0:
@@ -316,9 +347,10 @@ class Player(Entity):
             self.position += direction * self.speed * time.dt
         self.is_moving = True
 
-    def _show_hit_marker(self):
-        c = color.rgba(255, 50, 50, 230)
-        size, gap = 0.025, 0.014
+    def _show_hit_marker(self, headshot=False):
+        # Red for body, bright yellow for headshot
+        c = color.rgba(255, 230, 60, 240) if headshot else color.rgba(255, 50, 50, 230)
+        size, gap = (0.034, 0.014) if headshot else (0.025, 0.014)
         offsets = [
             (Vec2(gap + size / 2, 0), (size, 0.003)),
             (Vec2(-(gap + size / 2), 0), (size, 0.003)),
@@ -329,7 +361,7 @@ class Player(Entity):
             line = Entity(parent=camera.ui, model='quad', color=c, scale=scl, position=pos)
             destroy(line, delay=0.15)
 
-    def take_damage(self, amount, attacker=None):
+    def take_damage(self, amount, attacker=None, headshot=False):
         if self.dead:
             return
 
@@ -337,12 +369,12 @@ class Player(Entity):
         self.health_bar.scale_x = max(0, self.health / 100)
 
         if attacker and attacker.is_local:
-            attacker._show_hit_marker()
+            attacker._show_hit_marker(headshot=headshot)
 
         if self.health <= 0:
             if attacker:
                 attacker.kills += 1
-                kill_feed.add(attacker.player_name, self.player_name)
+                kill_feed.add(attacker.player_name, self.player_name, headshot=headshot)
             self.die()
 
     def die(self):
@@ -352,7 +384,10 @@ class Player(Entity):
         self.health_bar.enabled = False
         self.visible = False
         self.collider = None
-        self.hitbox.enabled = False
+        self.body_hitbox.enabled = False
+        self.head_hitbox.enabled = False
+        if self.is_local and hasattr(self, 'crosshair'):
+            self.crosshair.enabled = False
         if self.has_bomb and search_destroy.sd_game:
             search_destroy.sd_game.drop_bomb(self.position)
             self.has_bomb = False
@@ -370,8 +405,11 @@ class Player(Entity):
         self.visible = True
         self.health_bar.enabled = True
         self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
-        self.hitbox.enabled = True
+        self.body_hitbox.enabled = True
+        self.head_hitbox.enabled = True
         self.health_bar.scale_x = 1
+        if self.is_local and hasattr(self, 'crosshair'):
+            self.crosshair.enabled = True
         self.has_bomb = False
         self.is_moving = False
         self.is_crouching = False
