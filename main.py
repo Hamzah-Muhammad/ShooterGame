@@ -135,6 +135,9 @@ Button(
 )
 
 
+_round_loadout_active = False
+
+
 def toggle_menu(show=None):
     if show is None:
         pause_menu.enabled = not pause_menu.enabled
@@ -146,20 +149,38 @@ def toggle_menu(show=None):
     application.paused = pause_menu.enabled
 
 
+def _open_round_loadout():
+    global _round_loadout_active
+    _round_loadout_active = True
+    search_destroy.sd_game.loadout_open = True
+    w = local_player.selected_weapon
+    ak47_btn.color   = color.azure if w == 'ak47'   else color.gray
+    sniper_btn.color = color.azure if w == 'sniper' else color.gray
+    loadout_menu.enabled = True
+
+
 def toggle_loadout(show):
+    global _round_loadout_active
     if show:
-        # Sync highlight to current weapon choice
         w = local_player.selected_weapon
         ak47_btn.color   = color.azure if w == 'ak47'   else color.gray
         sniper_btn.color = color.azure if w == 'sniper' else color.gray
     loadout_menu.enabled = show
-    pause_menu.enabled = not show
+    if _round_loadout_active:
+        if not show:
+            _round_loadout_active = False
+            search_destroy.sd_game.loadout_open = False
+            local_player.gun.set_weapon(local_player.selected_weapon)
+    else:
+        pause_menu.enabled = not show
 
 
 def select_weapon(weapon_type):
     local_player.selected_weapon = weapon_type
     ak47_btn.color   = color.azure if weapon_type == 'ak47'   else color.gray
     sniper_btn.color = color.azure if weapon_type == 'sniper' else color.gray
+    if _round_loadout_active:
+        toggle_loadout(False)
 
 
 def input(key):
@@ -172,6 +193,7 @@ def input(key):
 
 # ── Search & Destroy ──────────────────────────────────────────────────────────
 search_destroy.sd_game = SearchAndDestroyGame(team_manager)
+search_destroy.sd_game.on_round_start = _open_round_loadout
 search_destroy.sd_game.start_round()
 
 

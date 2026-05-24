@@ -69,6 +69,8 @@ class SearchAndDestroyGame:
         self.switch_message = None
         self.win_screen = None
         self.bomb_timer_ui = None
+        self.on_round_start = None
+        self.loadout_open = False
         self.bomb_plant_notif = None
 
         self.countdown_active = False
@@ -150,6 +152,8 @@ class SearchAndDestroyGame:
 
         self._reset_action()
         self.apply_team_colors()
+        if self.on_round_start:
+            self.on_round_start()
         self.start_countdown()
 
     def on_player_death(self, player):
@@ -223,7 +227,8 @@ class SearchAndDestroyGame:
 
     def update(self):
         if self.countdown_active:
-            self.countdown -= time.dt
+            if not self.loadout_open:
+                self.countdown -= time.dt
             remaining = math.ceil(self.countdown)
             if remaining > 0:
                 self.countdown_text.text = str(remaining)
