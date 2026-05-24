@@ -264,8 +264,8 @@ class Gun(Entity):
             dmg = self._stats['damage'] * (HEADSHOT_MULTIPLIER if best_is_head else 1.0)
             best_target.take_damage(dmg, attacker=self.player, headshot=best_is_head)
 
-        # Visual tracer
-        tracer_end = origin + direction * tracer_dist
+        # Visual tracer — clamp to avoid zero-length entity at extreme close range
+        tracer_end = origin + direction * max(0.05, tracer_dist)
         mid = (origin + tracer_end) * 0.5
         length = (tracer_end - origin).length()
         tracer = Entity(
