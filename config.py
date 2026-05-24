@@ -50,17 +50,13 @@ TEAM_COLORS = {
     'red': color.red,
 }
 
-SPAWN_SPACING = MAP_SIZE // 5
-SPAWN_OFFSET = -MAP_SIZE // 2 + SPAWN_SPACING // 2
-SPAWN_Z_OFFSET = MAP_SIZE // 2 - SPAWN_SPACING // 2
-
 SPAWN_POINTS = {
-    'blue': [(SPAWN_OFFSET + i * SPAWN_SPACING, 1, -SPAWN_Z_OFFSET) for i in range(5)],
-    'red':  [(SPAWN_OFFSET + i * SPAWN_SPACING, 1,  SPAWN_Z_OFFSET) for i in range(5)]
+    'blue': [(0, 1, -(MAP_SIZE // 2 - MAP_SIZE // 10))],
+    'red':  [(0, 1,   MAP_SIZE // 2 - MAP_SIZE // 10)],
 }
 
-BLUE_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']
-RED_NAMES = ['Viper', 'Cobra', 'Falcon', 'Ghost', 'Reaper']
+BLUE_NAMES = ['Alpha']
+RED_NAMES = ['Viper']
 
 # ── Weapon stats — AK-47 ───────────────────────────────────────────────────
 AK47_DAMAGE          = 25

@@ -17,14 +17,14 @@ class TeamManager:
         self.red_team = Team('red', TEAM_COLORS['red'], SPAWN_POINTS['red'], RED_NAMES)
 
     def spawn_teams(self):
-        for i in range(5):
+        for i in range(1):
             spawn = self.blue_team.spawn_points[i % len(self.blue_team.spawn_points)]
             name = self.blue_team.names[i % len(self.blue_team.names)]
-            is_local = (i == 0)  # First player is local
+            is_local = (i == 0)
             player = Player(team_color=self.blue_team.color, spawn_point=spawn, name=name, is_local=is_local, team_manager=self)
             self.blue_team.players.append(player)
 
-        for i in range(5):
+        for i in range(1):
             spawn = self.red_team.spawn_points[i % len(self.red_team.spawn_points)]
             name = self.red_team.names[i % len(self.red_team.names)]
             player = Player(team_color=self.red_team.color, spawn_point=spawn, name=name, is_local=False, team_manager=self)
