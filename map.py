@@ -83,7 +83,7 @@ def _create_tree(x, z):
     trunk_h = random.uniform(2.5, 5.0)
     trunk_w = random.uniform(0.28, 0.48)
     Entity(model='cube', scale=(trunk_w, trunk_h, trunk_w),
-           position=(x, trunk_h/2, z), color=TRUNK_COLOR)
+           position=(x, trunk_h/2, z), color=TRUNK_COLOR, collider='box')
 
     g = random.randint(95, 145)
     fc = color.rgb32(random.randint(20, 45), g, random.randint(20, 45))
@@ -112,7 +112,7 @@ def _fence(x1, z1, x2, z2, post_spacing=3.5):
     # Rails
     for ry in [1.25, 0.55]:
         Entity(model='cube', scale=(0.1, 0.09, length),
-               position=(mx, ry, mz), rotation_y=angle, color=FENCE_COLOR)
+               position=(mx, ry, mz), rotation_y=angle, color=FENCE_COLOR, collider='box')
 
     # Posts
     n = max(2, int(length / post_spacing) + 1)
@@ -121,7 +121,7 @@ def _fence(x1, z1, x2, z2, post_spacing=3.5):
         px = x1 + dx*t
         pz = z1 + dz*t
         Entity(model='cube', scale=(0.13, 1.6, 0.13),
-               position=(px, 0.8, pz), color=FENCE_POST)
+               position=(px, 0.8, pz), color=FENCE_POST, collider='box')
 
 
 # ── Stone cover wall ───────────────────────────────────────────────────────────
