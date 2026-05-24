@@ -364,6 +364,7 @@ class SearchAndDestroyGame:
             destroy(self.bomb_plant_notif)
         self.bomb_plant_notif = Text(
             text='BOMB PLANTED',
+            parent=camera.ui,
             origin=(0, 0),
             scale=3,
             background=True,
@@ -375,6 +376,7 @@ class SearchAndDestroyGame:
             destroy(self.bomb_timer_ui)
         self.bomb_timer_ui = Text(
             text=f'BOMB  {BOMB_TIMER}s',
+            parent=camera.ui,
             position=(0, -0.38),
             origin=(0, 0),
             scale=2,
@@ -428,6 +430,7 @@ class SearchAndDestroyGame:
         self.countdown_active = True
         self.countdown_text = Text(
             text=str(seconds),
+            parent=camera.ui,
             origin=(0, 0),
             scale=4,
             background=True,

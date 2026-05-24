@@ -227,10 +227,19 @@ class Player(Entity):
         else:
             move_speed = PLAYER_SPEED
 
-        self.is_moving = move.length() > 0.01
-
-        move = self.forward * move.z + self.right * move.x
-        self.position += move * move_speed * time.dt
+        move_world = self.forward * move.z + self.right * move.x
+        self.is_moving = False
+        if move_world.length() > 0.01:
+            probe = raycast(
+                self.world_position + Vec3(0, 1, 0),
+                move_world.normalized(),
+                distance=0.6,
+                ignore=[self, self.body_hitbox, self.head_hitbox, self.gun],
+            )
+            # Only map geometry blocks movement (no owner attr); players pass through
+            if not probe.hit or getattr(probe.entity, 'owner', None) is not None:
+                self.position += move_world * move_speed * time.dt
+                self.is_moving = True
 
         if held_keys['space']:
             self.jump()
@@ -306,10 +315,21 @@ class Player(Entity):
         else:
             self.is_moving = False
 
-        if dist < 20:
+        if dist < 20 and self._ai_has_los(nearest):
             self.gun.shoot()
 
         self.gun.update()
+
+    def _ai_has_los(self, target):
+        los_dir = (target.world_position - self.world_position).normalized()
+        dist = distance(self.world_position, target.world_position)
+        los = raycast(
+            self.world_position + Vec3(0, 1.5, 0),
+            los_dir,
+            distance=dist,
+            ignore=[self, self.body_hitbox, self.head_hitbox],
+        )
+        return los.hit and getattr(los.entity, 'owner', None) == target
 
     def _ai_engage_nearby(self, range_limit=14):
         enemies = [p for p in self.team_manager.get_opposing_players(self.team_color) if not p.dead]
@@ -320,7 +340,8 @@ class Player(Entity):
             dx = nearest.position.x - self.position.x
             dz = nearest.position.z - self.position.z
             self.rotation_y = math.degrees(math.atan2(dx, dz))
-            self.gun.shoot()
+            if self._ai_has_los(nearest):
+                self.gun.shoot()
 
     def _ai_move_toward(self, target):
         direction = target - self.position
@@ -386,6 +407,7 @@ class Player(Entity):
             return
         self.dead = True
         self.health_bar.enabled = False
+        self.name_text.visible = False
         self.visible = False
         self.collider = None
         self.body_hitbox.enabled = False
@@ -407,6 +429,7 @@ class Player(Entity):
         self.health = 100
         self.dead = False
         self.visible = True
+        self.name_text.visible = True
         self.health_bar.enabled = True
         self.body_hitbox.enabled = True
         self.head_hitbox.enabled = True
