@@ -52,26 +52,24 @@ class Player(Entity):
         # CollisionBox at entity.scale size but only translate (not scale) it
         # via the parent transform, making the effective hitbox 1.5× too small.
         _x, _z = spawn_point[0], spawn_point[2]
-        self.body_hitbox = Entity(
-            model='cube',
-            scale=Vec3(1.5, 2.4, 1.5),
-            position=Vec3(_x, 2.2, _z),
-            collider='box',
-            visible=False,
+        # Hitboxes use BoxCollider with explicit sizes — Panda3D's CollisionBox
+        # does not correctly transform under non-uniform node scale, so we bake
+        # the dimensions directly into the collider instead of using entity.scale.
+        self.body_hitbox = Entity(position=Vec3(_x, 2.2, _z), visible=False)
+        self.body_hitbox.collider = BoxCollider(
+            self.body_hitbox, center=Vec3(0, 0, 0), size=Vec3(1.5, 2.4, 1.5)
         )
         self.body_hitbox.owner = self
         self.body_hitbox.is_head = False
 
-        self.head_hitbox = Entity(
-            model='cube',
-            scale=Vec3(0.825, 0.6, 0.825),
-            position=Vec3(_x, 3.7, _z),
-            collider='box',
-            visible=False,
+        self.head_hitbox = Entity(position=Vec3(_x, 3.7, _z), visible=False)
+        self.head_hitbox.collider = BoxCollider(
+            self.head_hitbox, center=Vec3(0, 0, 0), size=Vec3(0.825, 0.6, 0.825)
         )
         self.head_hitbox.owner = self
         self.head_hitbox.is_head = True
         self.hitbox = self.body_hitbox
+        self._crouching_hitbox = False  # tracks which collider size is active
 
         self.speed = PLAYER_SPEED
         self.jump_height = PLAYER_JUMP_HEIGHT
@@ -180,16 +178,29 @@ class Player(Entity):
 
     def _update_hitbox_pose(self):
         x, y, z = self.x, self.y, self.z
-        if self.is_crouching:
+        crouching = self.is_crouching
+        if crouching:
             self.body_hitbox.position = Vec3(x, y + 0.75, z)
-            self.body_hitbox.scale    = Vec3(1.5, 1.5,  1.5)
             self.head_hitbox.position = Vec3(x, y + 1.80, z)
-            self.head_hitbox.scale    = Vec3(0.825, 0.525, 0.825)
         else:
             self.body_hitbox.position = Vec3(x, y + 1.2, z)
-            self.body_hitbox.scale    = Vec3(1.5, 2.4,  1.5)
             self.head_hitbox.position = Vec3(x, y + 2.7, z)
-            self.head_hitbox.scale    = Vec3(0.825, 0.6, 0.825)
+        if crouching != self._crouching_hitbox:
+            self._crouching_hitbox = crouching
+            if crouching:
+                self.body_hitbox.collider = BoxCollider(
+                    self.body_hitbox, center=Vec3(0, 0, 0), size=Vec3(1.5, 1.5, 1.5)
+                )
+                self.head_hitbox.collider = BoxCollider(
+                    self.head_hitbox, center=Vec3(0, 0, 0), size=Vec3(0.825, 0.525, 0.825)
+                )
+            else:
+                self.body_hitbox.collider = BoxCollider(
+                    self.body_hitbox, center=Vec3(0, 0, 0), size=Vec3(1.5, 2.4, 1.5)
+                )
+                self.head_hitbox.collider = BoxCollider(
+                    self.head_hitbox, center=Vec3(0, 0, 0), size=Vec3(0.825, 0.6, 0.825)
+                )
 
     def _apply_gravity(self):
         if not self.on_ground:
@@ -449,6 +460,7 @@ class Player(Entity):
         self.has_bomb = False
         self.is_moving = False
         self.is_crouching = False
+        self._crouching_hitbox = True  # force standing collider restore on next pose update
         self.velocity_y = 0
         self.on_ground = True
         self._last_health = 100
