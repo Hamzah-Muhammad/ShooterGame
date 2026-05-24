@@ -189,7 +189,10 @@ class Gun(Entity):
 
         if self.player.is_local:
             base_dir = camera.forward
-            origin = camera.world_position
+            # Shift origin 1 unit forward — guarantees the ray starts outside
+            # the local player's own hitbox (max half-extent 0.75) so we don't
+            # need to rely solely on the ignore list to clear it.
+            origin = camera.world_position + base_dir
         else:
             base_dir = self.forward
             origin = self.world_position
@@ -200,14 +203,15 @@ class Gun(Entity):
         ray = raycast(
             origin,
             direction,
-            distance=500,
+            distance=499,
             ignore=[self.player, self.player.body_hitbox, self.player.head_hitbox, self],
         )
 
         if ray.hit and ray.entity:
             target = getattr(ray.entity, 'owner', None)
             is_head = getattr(ray.entity, 'is_head', False)
-            if target and not getattr(target, 'dead', True):
+            if (target and target is not self.player
+                    and not getattr(target, 'dead', True)):
                 opposing = self.player.team_manager.get_opposing_players(self.player.team_color)
                 if target in opposing:
                     dmg = self._stats['damage'] * (HEADSHOT_MULTIPLIER if is_head else 1.0)

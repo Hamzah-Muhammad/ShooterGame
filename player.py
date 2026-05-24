@@ -47,30 +47,30 @@ class Player(Entity):
             parent=self,
             always_on_top=True
         )
-        # No BoxCollider on the player entity — hitboxes below handle all
-        # bullet detection so raycasts always land on an entity with owner set.
+        # Standalone hitboxes at true world-scale — NOT parented to self.
+        # Parenting to a scaled entity causes Ursina/Panda3D to create the
+        # CollisionBox at entity.scale size but only translate (not scale) it
+        # via the parent transform, making the effective hitbox 1.5× too small.
+        _x, _z = spawn_point[0], spawn_point[2]
         self.body_hitbox = Entity(
-            parent=self,
             model='cube',
-            scale=Vec3(1, 1.6, 1),
-            position=Vec3(0, 0.8, 0),
+            scale=Vec3(1.5, 2.4, 1.5),
+            position=Vec3(_x, 2.2, _z),
             collider='box',
             visible=False,
         )
         self.body_hitbox.owner = self
         self.body_hitbox.is_head = False
-        # Head hitbox — smaller, on top
+
         self.head_hitbox = Entity(
-            parent=self,
             model='cube',
-            scale=Vec3(0.55, 0.4, 0.55),
-            position=Vec3(0, 1.8, 0),
+            scale=Vec3(0.825, 0.6, 0.825),
+            position=Vec3(_x, 3.7, _z),
             collider='box',
             visible=False,
         )
         self.head_hitbox.owner = self
         self.head_hitbox.is_head = True
-        # Back-compat alias for any external refs
         self.hitbox = self.body_hitbox
 
         self.speed = PLAYER_SPEED
@@ -179,17 +179,17 @@ class Player(Entity):
             self._update_ai()
 
     def _update_hitbox_pose(self):
-        """Shrink hitboxes when crouching so crouch is mechanically real, not just visual."""
+        x, y, z = self.x, self.y, self.z
         if self.is_crouching:
-            self.body_hitbox.scale = Vec3(1, 1.0, 1)
-            self.body_hitbox.position = Vec3(0, 0.5, 0)
-            self.head_hitbox.scale = Vec3(0.55, 0.35, 0.55)
-            self.head_hitbox.position = Vec3(0, 1.2, 0)
+            self.body_hitbox.position = Vec3(x, y + 0.75, z)
+            self.body_hitbox.scale    = Vec3(1.5, 1.5,  1.5)
+            self.head_hitbox.position = Vec3(x, y + 1.80, z)
+            self.head_hitbox.scale    = Vec3(0.825, 0.525, 0.825)
         else:
-            self.body_hitbox.scale = Vec3(1, 1.6, 1)
-            self.body_hitbox.position = Vec3(0, 0.8, 0)
-            self.head_hitbox.scale = Vec3(0.55, 0.4, 0.55)
-            self.head_hitbox.position = Vec3(0, 1.8, 0)
+            self.body_hitbox.position = Vec3(x, y + 1.2, z)
+            self.body_hitbox.scale    = Vec3(1.5, 2.4,  1.5)
+            self.head_hitbox.position = Vec3(x, y + 2.7, z)
+            self.head_hitbox.scale    = Vec3(0.825, 0.6, 0.825)
 
     def _apply_gravity(self):
         if not self.on_ground:
