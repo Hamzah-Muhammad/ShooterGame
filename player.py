@@ -47,8 +47,8 @@ class Player(Entity):
             parent=self,
             always_on_top=True
         )
-        self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
-        # Body hitbox — torso + legs
+        # No BoxCollider on the player entity — hitboxes below handle all
+        # bullet detection so raycasts always land on an entity with owner set.
         self.body_hitbox = Entity(
             parent=self,
             model='cube',
@@ -98,9 +98,10 @@ class Player(Entity):
 
         if self.is_local:
             camera.parent = self
-            camera.position = (0, 2, 1)
-            camera.rotation = (10, 0, 0)
-            self.camera_pitch = camera.rotation_x
+            camera.position = (0, 2, 0)
+            camera.rotation = (0, 0, 0)
+            self.camera_pitch = 0
+            self.camera_recoil = 0.0
             mouse.locked = True
             self.crosshair = Entity(
                 parent=camera.ui,
@@ -209,7 +210,6 @@ class Player(Entity):
         self.rotation_y += mouse.velocity[0] * 100
         self.camera_pitch -= mouse.velocity[1] * 100
         self.camera_pitch = max(min(self.camera_pitch, 60), -60)
-        camera.rotation_x = self.camera_pitch
 
         # Crouch (ctrl)
         if held_keys['control']:
@@ -243,6 +243,9 @@ class Player(Entity):
 
         if held_keys['4'] and search_destroy.sd_game:
             search_destroy.sd_game.handle_action(self)
+
+        # Apply camera pitch + recoil offset after gun update so kick is immediate
+        camera.rotation_x = max(-60, min(60, self.camera_pitch + self.camera_recoil))
 
     def jump(self):
         if self.on_ground:
@@ -404,7 +407,6 @@ class Player(Entity):
         self.dead = False
         self.visible = True
         self.health_bar.enabled = True
-        self.collider = BoxCollider(self, center=Vec3(0, 1, 0), size=Vec3(1, 2, 1))
         self.body_hitbox.enabled = True
         self.head_hitbox.enabled = True
         self.health_bar.scale_x = 1
@@ -417,6 +419,8 @@ class Player(Entity):
         self.on_ground = True
         self._last_health = 100
         self._evasion_timer = 0.0
+        if self.is_local:
+            self.camera_recoil = 0.0
         self.gun.reset()
         if self.bomb_indicator:
             self.bomb_indicator.text = ''
