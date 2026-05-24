@@ -9,6 +9,7 @@ class KillFeed:
         if len(self._entries) >= self.max_entries:
             old = self._entries.pop(0)
             destroy(old)
+            self._reposition()  # shift remaining entries up before placing new one
 
         arrow = ' >HS> ' if headshot else '  >  '
         entry = Text(
@@ -32,7 +33,7 @@ class KillFeed:
     def _expire(self, entry):
         if entry in self._entries:
             self._entries.remove(entry)
-        destroy(entry)
+            destroy(entry)
         self._reposition()
 
 

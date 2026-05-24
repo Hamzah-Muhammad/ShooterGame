@@ -272,13 +272,13 @@ class SearchAndDestroyGame:
                 remaining = max(0, math.ceil(self.bomb_timer))
                 self.bomb_timer_ui.text = f'BOMB  {remaining}s'
                 if self.bomb_timer > 10:
-                    self.bomb_timer_ui.color = color.red
+                    self.bomb_timer_ui.color = color.white
                     self.bomb_timer_ui.enabled = True
                 elif self.bomb_timer > 5:
                     self.bomb_timer_ui.color = color.orange
                     self.bomb_timer_ui.enabled = True
                 else:
-                    self.bomb_timer_ui.color = color.yellow
+                    self.bomb_timer_ui.color = color.red
                     self.bomb_timer_ui.enabled = int(self.bomb_timer * 4) % 2 == 0
             if self.bomb_timer <= 0:
                 # Award first so round_over_active guards the on_player_death cascade
