@@ -12,6 +12,31 @@ from config import (
 import math
 import random
 
+
+def _ray_aabb(origin, direction, box_min, box_max):
+    """Slab-method ray vs AABB. Returns distance to first intersection (>=0) or None."""
+    t_min = 0.0
+    t_max = float('inf')
+    for i in range(3):
+        d = direction[i]
+        o = origin[i]
+        lo = box_min[i]
+        hi = box_max[i]
+        if abs(d) < 1e-9:
+            if o < lo or o > hi:
+                return None
+        else:
+            t1 = (lo - o) / d
+            t2 = (hi - o) / d
+            if t1 > t2:
+                t1, t2 = t2, t1
+            t_min = max(t_min, t1)
+            t_max = min(t_max, t2)
+            if t_min > t_max:
+                return None
+    return t_min
+
+
 WEAPON_STATS = {
     'ak47': {
         'damage':          AK47_DAMAGE,
@@ -189,9 +214,6 @@ class Gun(Entity):
 
         if self.player.is_local:
             base_dir = camera.forward
-            # Shift origin 1 unit forward — guarantees the ray starts outside
-            # the local player's own hitbox (max half-extent 0.75) so we don't
-            # need to rely solely on the ignore list to clear it.
             origin = camera.world_position + base_dir
         else:
             base_dir = self.forward
@@ -200,25 +222,50 @@ class Gun(Entity):
         spread = self._get_spread_deg()
         direction = self._spread_direction(base_dir, spread)
 
-        ray = raycast(
-            origin,
-            direction,
-            distance=499,
-            ignore=[self.player, self.player.body_hitbox, self.player.head_hitbox, self],
-        )
+        # ── Step 1: AABB check against each enemy — bypasses Ursina's entity
+        #   lookup so hit registration doesn't depend on Panda3D collision quirks.
+        best_target = None
+        best_is_head = False
+        best_dist = 499.0
 
-        if ray.hit and ray.entity:
-            target = getattr(ray.entity, 'owner', None)
-            is_head = getattr(ray.entity, 'is_head', False)
-            if (target and target is not self.player
-                    and not getattr(target, 'dead', True)):
-                opposing = self.player.team_manager.get_opposing_players(self.player.team_color)
-                if target in opposing:
-                    dmg = self._stats['damage'] * (HEADSHOT_MULTIPLIER if is_head else 1.0)
-                    target.take_damage(dmg, attacker=self.player, headshot=is_head)
+        opposing = self.player.team_manager.get_opposing_players(self.player.team_color)
+        for candidate in opposing:
+            if getattr(candidate, 'dead', True):
+                continue
+            for is_head, bounds in [(False, candidate.get_body_bounds()),
+                                     (True,  candidate.get_head_bounds())]:
+                d = _ray_aabb(origin, direction, bounds[0], bounds[1])
+                if d is not None and 0 <= d < best_dist:
+                    best_dist = d
+                    best_target = candidate
+                    best_is_head = is_head
+
+        # ── Step 2: wall obstruction — raycast against map geometry only.
+        #   We only need ray.hit / ray.distance here, not ray.entity.
+        all_player_nodes = []
+        for p in self.player.team_manager.all_players:
+            all_player_nodes += [p, p.body_hitbox, p.head_hitbox]
+        all_player_nodes.append(self)
+
+        wall = raycast(origin, direction,
+                       distance=best_dist if best_target else 499,
+                       ignore=all_player_nodes)
+
+        if wall.hit:
+            best_target = None
+            tracer_dist = wall.distance
+        elif best_target:
+            tracer_dist = best_dist
+        else:
+            tracer_dist = 200
+
+        # ── Step 3: apply damage ──────────────────────────────────────────────
+        if best_target:
+            dmg = self._stats['damage'] * (HEADSHOT_MULTIPLIER if best_is_head else 1.0)
+            best_target.take_damage(dmg, attacker=self.player, headshot=best_is_head)
 
         # Visual tracer
-        tracer_end = origin + direction * (ray.distance if ray.hit else 200)
+        tracer_end = origin + direction * tracer_dist
         mid = (origin + tracer_end) * 0.5
         length = (tracer_end - origin).length()
         tracer = Entity(

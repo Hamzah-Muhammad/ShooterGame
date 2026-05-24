@@ -339,16 +339,39 @@ class Player(Entity):
 
         self.gun.update()
 
+    def get_body_bounds(self):
+        """World-space AABB (min, max) of the body hitbox at current position."""
+        x, y, z = self.x, self.y, self.z
+        if self.is_crouching:
+            cy, half_h = y + 0.75, 0.75
+        else:
+            cy, half_h = y + 1.2, 1.2
+        return (Vec3(x - 0.75, cy - half_h, z - 0.75),
+                Vec3(x + 0.75, cy + half_h, z + 0.75))
+
+    def get_head_bounds(self):
+        """World-space AABB (min, max) of the head hitbox at current position."""
+        x, y, z = self.x, self.y, self.z
+        if self.is_crouching:
+            cy, half_h = y + 1.80, 0.2625
+        else:
+            cy, half_h = y + 2.7, 0.3
+        return (Vec3(x - 0.4125, cy - half_h, z - 0.4125),
+                Vec3(x + 0.4125, cy + half_h, z + 0.4125))
+
     def _ai_has_los(self, target):
         los_dir = (target.world_position - self.world_position).normalized()
         dist = distance(self.world_position, target.world_position)
-        los = raycast(
+        all_player_nodes = []
+        for p in self.team_manager.all_players:
+            all_player_nodes += [p, p.body_hitbox, p.head_hitbox]
+        wall = raycast(
             self.world_position + Vec3(0, 1.5, 0),
             los_dir,
             distance=dist,
-            ignore=[self, self.body_hitbox, self.head_hitbox],
+            ignore=all_player_nodes,
         )
-        return los.hit and getattr(los.entity, 'owner', None) == target
+        return not wall.hit
 
     def _ai_engage_nearby(self, range_limit=14):
         enemies = [p for p in self.team_manager.get_opposing_players(self.team_color) if not p.dead]
