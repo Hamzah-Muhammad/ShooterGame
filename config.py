@@ -65,8 +65,8 @@ AK47_AMMO            = 30
 AK47_RELOAD_TIME     = 1.5
 AK47_RECOIL_PER_SHOT = 0.4
 AK47_RECOIL_MAX      = 2.5
-AK47_BASE_SPREAD     = 0.1
-AK47_MOVE_SPREAD     = 1.5
+AK47_BASE_SPREAD     = 0.0
+AK47_MOVE_SPREAD     = 0.0
 
 # ── Weapon stats — L96A1 Sniper ────────────────────────────────────────────
 SNIPER_DAMAGE      = 100    # one-shot kill (body or head)
