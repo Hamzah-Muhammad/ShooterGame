@@ -544,6 +544,9 @@ class SearchAndDestroyGame:
         self.round_over_active = False
         self.round_over_timer = 0.0
         self.pending_winner = None
+        # Reset all players to AK47 at match start (AI re-randomises in respawn)
+        for p in self.team_manager.all_players:
+            p.selected_weapon = 'ak47'
         application.paused = False
         mouse.locked = True
         self.start_round()
