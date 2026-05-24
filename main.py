@@ -25,7 +25,7 @@ pause_menu = Entity(parent=camera.ui, enabled=False, ignore_paused=True)
 Panel(
     parent=pause_menu,
     scale=(0.4, 0.3),
-    color=color.rgba(0, 0, 0, 150),
+    color=color.rgba32(0, 0, 0, 150),
     ignore_paused=True,
 )
 Button(

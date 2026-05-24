@@ -4,26 +4,26 @@ from config import MAP_SIZE, BOMB_SITES
 import math
 
 # ── Palette ────────────────────────────────────────────────────────────────────
-BOMB_WALL_COLOR = color.rgb(110, 75,  45)
-BOMB_ROOF_COLOR = color.rgb( 60, 40,  25)
-BOMB_DOOR_COLOR = color.rgb( 15, 10,   8)
+BOMB_WALL_COLOR = color.rgb32(110, 75,  45)
+BOMB_ROOF_COLOR = color.rgb32( 60, 40,  25)
+BOMB_DOOR_COLOR = color.rgb32( 15, 10,   8)
 
 HOUSE_WALL_COLORS = [
-    color.rgb(215, 190, 160),
-    color.rgb(185, 160, 130),
-    color.rgb(200, 175, 145),
-    color.rgb(170, 148, 122),
+    color.rgb32(215, 190, 160),
+    color.rgb32(185, 160, 130),
+    color.rgb32(200, 175, 145),
+    color.rgb32(170, 148, 122),
 ]
 HOUSE_ROOF_COLORS = [
-    color.rgb(140, 55, 35),
-    color.rgb( 85, 72, 60),
-    color.rgb(158, 88, 38),
+    color.rgb32(140, 55, 35),
+    color.rgb32( 85, 72, 60),
+    color.rgb32(158, 88, 38),
 ]
 
-STONE_COLOR  = color.rgb(128, 112,  98)
-FENCE_COLOR  = color.rgb(118,  78,  42)
-FENCE_POST   = color.rgb( 95,  60,  28)
-TRUNK_COLOR  = color.rgb( 75,  48,  22)
+STONE_COLOR  = color.rgb32(128, 112,  98)
+FENCE_COLOR  = color.rgb32(118,  78,  42)
+FENCE_POST   = color.rgb32( 95,  60,  28)
+TRUNK_COLOR  = color.rgb32( 75,  48,  22)
 
 ROOF_ANGLE = 32   # degrees for gable roof slope
 
@@ -59,23 +59,23 @@ def _create_house(x, z, width=10, depth=9, wall_h=4, rotation_y=0):
                position=(0, roof_y, z_off), rotation_x=rx, color=rc)
     # Ridge cap
     Entity(parent=pivot, model='cube', scale=(width+0.6, 0.28, 0.35),
-           position=(0, roof_y+0.12, 0), color=color.rgb(70, 40, 20))
+           position=(0, roof_y+0.12, 0), color=color.rgb32(70, 40, 20))
 
     # Windows (front face, local -z)
     for wx in [-width/4, width/4]:
         Entity(parent=pivot, model='cube', scale=(1.4, 1.2, 0.15),
                position=(wx, wall_h*0.62, -depth/2-0.09),
-               color=color.rgb(100, 145, 190))
+               color=color.rgb32(100, 145, 190))
 
     # Door
     Entity(parent=pivot, model='cube', scale=(1.4, 2.3, 0.15),
-           position=(0, 1.15, -depth/2-0.09), color=color.rgb(85, 52, 28))
+           position=(0, 1.15, -depth/2-0.09), color=color.rgb32(85, 52, 28))
 
     # Random chimney
     if random.random() > 0.45:
         cx = random.uniform(-width/3, width/3)
         Entity(parent=pivot, model='cube', scale=(0.7, 1.8, 0.7),
-               position=(cx, roof_y+0.9, 0), color=color.rgb(90, 80, 75))
+               position=(cx, roof_y+0.9, 0), color=color.rgb32(90, 80, 75))
 
 
 # ── Tree ───────────────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ def _create_tree(x, z):
            position=(x, trunk_h/2, z), color=TRUNK_COLOR)
 
     g = random.randint(95, 145)
-    fc = color.rgb(random.randint(20, 45), g, random.randint(20, 45))
+    fc = color.rgb32(random.randint(20, 45), g, random.randint(20, 45))
 
     if random.random() > 0.35:
         # Round deciduous
@@ -138,7 +138,7 @@ def create_map():
     # Ground
     Entity(model='plane', scale=(MAP_SIZE, 1, MAP_SIZE),
            texture='grass', texture_scale=(MAP_SIZE//8, MAP_SIZE//8),
-           color=color.rgb(55, 115, 50), collider='box')
+           color=color.rgb32(55, 115, 50), collider='box')
 
     # Invisible boundary walls
     half = MAP_SIZE / 2
@@ -162,7 +162,7 @@ def create_map():
         px = random.uniform(-half+sx, half-sx)
         pz = random.uniform(-half+sz, half-sz)
         Entity(model='cube', scale=(sx, random.uniform(2, 4), sz),
-               position=(px, 1, pz), color=color.rgb(100, 65, 35), collider='box')
+               position=(px, 1, pz), color=color.rgb32(100, 65, 35), collider='box')
 
     # Roads between sites
     def _road(a, b):
@@ -172,7 +172,7 @@ def create_map():
         ang  = math.degrees(math.atan2(e.x-s.x, e.z-s.z))
         Entity(model='cube', scale=(4, 0.1, lng),
                position=(mid.x, 0.05, mid.z), rotation=(0, ang, 0),
-               color=color.rgb(60, 60, 60))
+               color=color.rgb32(60, 60, 60))
 
     for i in range(len(BOMB_SITES)):
         _road(BOMB_SITES[i], BOMB_SITES[(i+1) % len(BOMB_SITES)])
@@ -269,8 +269,8 @@ def create_map():
     # ── Lighting ──────────────────────────────────────────────────────────────
     sun = DirectionalLight()
     sun.look_at(Vec3(1, -3, 1))
-    sun.color = color.rgb(255, 235, 190)
-    AmbientLight(color=color.rgba(90, 100, 130, 255))
+    sun.color = color.rgb32(255, 235, 190)
+    AmbientLight(color=color.rgba32(90, 100, 130, 255))
 
     sky = Sky()
-    sky.color = color.rgb(100, 155, 220)
+    sky.color = color.rgb32(100, 155, 220)

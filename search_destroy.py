@@ -17,9 +17,9 @@ from config import (
 )
 
 SITE_COLORS = [
-    color.rgb(100, 255, 100),   # A - green
-    color.rgb(255, 180, 180),   # B - pink
-    color.rgb(100, 180, 255),   # C - blue
+    color.rgb32(100, 255, 100),   # A - green
+    color.rgb32(255, 180, 180),   # B - pink
+    color.rgb32(100, 180, 255),   # C - blue
 ]
 SITE_LABELS = ['A', 'B', 'C']
 
@@ -49,7 +49,7 @@ class SearchAndDestroyGame:
             )
             Entity(
                 model='cube',
-                color=color.rgba(255, 0, 0, 80),
+                color=color.rgba32(255, 0, 0, 80),
                 scale=6,
                 position=(site[0], 0.05, site[2]),
             )
@@ -104,7 +104,7 @@ class SearchAndDestroyGame:
         self.action_bar_bg = Entity(
             model='quad',
             parent=camera.ui,
-            color=color.rgb(40, 40, 40),
+            color=color.rgb32(40, 40, 40),
             scale=(0.35, 0.022),
             position=(0, -0.46),
             enabled=False,
@@ -448,7 +448,7 @@ class SearchAndDestroyGame:
                 dmg = BOMB_BLAST_DAMAGE * (1.0 - d / BOMB_BLAST_RADIUS)
                 p.take_damage(dmg, attacker=None)
 
-        blast_colors = [color.orange, color.yellow, color.rgb(255, 80, 0)]
+        blast_colors = [color.orange, color.yellow, color.rgb32(255, 80, 0)]
         for i in range(20):
             p = Entity(
                 model='sphere',
@@ -465,7 +465,7 @@ class SearchAndDestroyGame:
 
         shockwave = Entity(
             model='sphere',
-            color=color.rgba(255, 160, 50, 160),
+            color=color.rgba32(255, 160, 50, 160),
             scale=1,
             position=pos,
         )
@@ -493,7 +493,7 @@ class SearchAndDestroyGame:
         Panel(
             parent=self.win_screen,
             scale=(0.55, 0.4),
-            color=color.rgba(0, 0, 0, 200),
+            color=color.rgba32(0, 0, 0, 200),
             ignore_paused=True,
         )
         Text(

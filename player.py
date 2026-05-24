@@ -349,7 +349,7 @@ class Player(Entity):
 
     def _show_hit_marker(self, headshot=False):
         # Red for body, bright yellow for headshot
-        c = color.rgba(255, 230, 60, 240) if headshot else color.rgba(255, 50, 50, 230)
+        c = color.rgba32(255, 230, 60, 240) if headshot else color.rgba32(255, 50, 50, 230)
         size, gap = (0.034, 0.014) if headshot else (0.025, 0.014)
         offsets = [
             (Vec2(gap + size / 2, 0), (size, 0.003)),

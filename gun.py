@@ -93,7 +93,7 @@ class Gun(Entity):
         length = (tracer_end - origin).length()
         tracer = Entity(
             model='cube',
-            color=color.rgba(255, 240, 120, 180),
+            color=color.rgba32(255, 240, 120, 180),
             scale=(0.03, 0.03, length),
             position=mid,
         )
@@ -104,7 +104,7 @@ class Gun(Entity):
         flash = Entity(
             parent=self,
             model='sphere',
-            color=color.rgba(255, 210, 60, 220),
+            color=color.rgba32(255, 210, 60, 220),
             scale=0.35,
             position=Vec3(0, 0, -1.1),
         )
