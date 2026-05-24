@@ -27,7 +27,7 @@ BULLET_BASE_SPREAD = 0.5      # degrees — standing still, not shooting
 BULLET_MOVE_SPREAD = 5.0      # degrees added when moving
 BULLET_RECOIL_PER_SHOT = 1.0  # degrees of recoil added per shot fired
 BULLET_RECOIL_MAX = 6.0       # degrees — maximum accumulated recoil
-BULLET_RECOIL_RECOVERY = 4.0  # degrees recovered per second
+BULLET_RECOIL_RECOVERY = 6.0  # degrees recovered per second
 AI_EXTRA_SPREAD = 3.0         # extra degrees for AI to balance difficulty
 CROUCH_SPREAD_MULT = 0.35     # crouch reduces spread to 35% of base
 
@@ -51,8 +51,8 @@ TEAM_COLORS = {
 }
 
 SPAWN_POINTS = {
-    'blue': [(0, 1, -(MAP_SIZE // 2 - MAP_SIZE // 10))],
-    'red':  [(0, 1,   MAP_SIZE // 2 - MAP_SIZE // 10)],
+    'blue': [(0, 1, -80)],
+    'red':  [(0, 1,  80)],
 }
 
 BLUE_NAMES = ['Alpha']
@@ -63,10 +63,10 @@ AK47_DAMAGE          = 25
 AK47_FIRE_RATE       = 0.1
 AK47_AMMO            = 30
 AK47_RELOAD_TIME     = 1.5
-AK47_RECOIL_PER_SHOT = 1.0
-AK47_RECOIL_MAX      = 6.0
-AK47_BASE_SPREAD     = 0.5
-AK47_MOVE_SPREAD     = 5.0
+AK47_RECOIL_PER_SHOT = 0.4
+AK47_RECOIL_MAX      = 2.5
+AK47_BASE_SPREAD     = 0.1
+AK47_MOVE_SPREAD     = 1.5
 
 # ── Weapon stats — L96A1 Sniper ────────────────────────────────────────────
 SNIPER_DAMAGE      = 100    # one-shot kill (body or head)
