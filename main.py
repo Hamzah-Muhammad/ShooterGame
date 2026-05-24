@@ -157,6 +157,7 @@ def _open_round_loadout():
     ak47_btn.color   = color.azure if w == 'ak47'   else color.gray
     sniper_btn.color = color.azure if w == 'sniper' else color.gray
     loadout_menu.enabled = True
+    mouse.locked = False
 
 
 def toggle_loadout(show):
@@ -171,6 +172,7 @@ def toggle_loadout(show):
             _round_loadout_active = False
             search_destroy.sd_game.loadout_open = False
             local_player.gun.set_weapon(local_player.selected_weapon)
+            mouse.locked = True
     else:
         pause_menu.enabled = not show
 
