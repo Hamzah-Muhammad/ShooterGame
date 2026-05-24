@@ -114,6 +114,13 @@ class Gun(Entity):
         self.ammo -= 1
         self.recoil = min(self.recoil + BULLET_RECOIL_PER_SHOT, BULLET_RECOIL_MAX)
 
+        # Visual camera kick — pushes crosshair up on each shot
+        if self.player.is_local:
+            self.player.camera_recoil = max(
+                -BULLET_RECOIL_MAX * 2.5,
+                self.player.camera_recoil - BULLET_RECOIL_PER_SHOT * 2.5,
+            )
+
         if self.ammo == 0:
             self._start_reload()
 
@@ -131,6 +138,8 @@ class Gun(Entity):
         self.reload_timer = 0
         self.fire_cooldown = 0
         self.recoil = 0.0
+        if self.player.is_local:
+            self.player.camera_recoil = 0.0
 
     def update(self):
         if self.reloading:
@@ -141,3 +150,10 @@ class Gun(Entity):
 
         self.fire_cooldown = max(0, self.fire_cooldown - time.dt)
         self.recoil = max(0.0, self.recoil - BULLET_RECOIL_RECOVERY * time.dt)
+
+        # Recover visual camera recoil toward 0
+        if self.player.is_local and self.player.camera_recoil < 0:
+            self.player.camera_recoil = min(
+                0.0,
+                self.player.camera_recoil + BULLET_RECOIL_RECOVERY * 2.5 * time.dt,
+            )
