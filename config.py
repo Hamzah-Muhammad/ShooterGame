@@ -61,3 +61,23 @@ SPAWN_POINTS = {
 
 BLUE_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']
 RED_NAMES = ['Viper', 'Cobra', 'Falcon', 'Ghost', 'Reaper']
+
+# ── Weapon stats — AK-47 ───────────────────────────────────────────────────
+AK47_DAMAGE          = 25
+AK47_FIRE_RATE       = 0.1
+AK47_AMMO            = 30
+AK47_RELOAD_TIME     = 1.5
+AK47_RECOIL_PER_SHOT = 1.0
+AK47_RECOIL_MAX      = 6.0
+AK47_BASE_SPREAD     = 0.5
+AK47_MOVE_SPREAD     = 5.0
+
+# ── Weapon stats — L96A1 Sniper ────────────────────────────────────────────
+SNIPER_DAMAGE      = 100    # one-shot kill (body or head)
+SNIPER_FIRE_RATE   = 0.05   # near-instant trigger pull
+SNIPER_AMMO        = 5
+SNIPER_RELOAD_TIME = 2.5
+SNIPER_BOLT_DELAY  = 1.5    # seconds to re-chamber after each shot
+SNIPER_BASE_SPREAD = 0.05   # very accurate when still and scoped
+SNIPER_MOVE_SPREAD = 12.0   # extremely inaccurate while moving
+SNIPER_SCOPE_FOV   = 15     # camera FOV when scoped in

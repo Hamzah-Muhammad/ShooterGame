@@ -82,6 +82,7 @@ class Player(Entity):
         self.has_bomb = False
         self.is_moving = False
         self.is_crouching = False
+        self.selected_weapon = 'ak47'
 
         # Gravity state
         self.velocity_y = 0
@@ -122,7 +123,7 @@ class Player(Entity):
                 color=color.white
             )
             self.ammo_text = Text(
-                text=f'{AMMO_CAPACITY} / {AMMO_CAPACITY}',
+                text=f'{self.gun._stats["ammo"]} / {self.gun._stats["ammo"]}',
                 parent=camera.ui,
                 position=window.bottom_right + Vec2(-0.05, 0.1),
                 origin=(1, 0),
@@ -163,7 +164,7 @@ class Player(Entity):
                     self.ammo_text.text = 'RELOADING...'
                     self.ammo_text.color = color.orange
                 else:
-                    self.ammo_text.text = f'{self.gun.ammo} / {AMMO_CAPACITY}'
+                    self.ammo_text.text = f'{self.gun.ammo} / {self.gun._stats["ammo"]}'
                     self.ammo_text.color = color.white if self.gun.ammo > 3 else color.red
             if self.health_text:
                 hp = max(0, int(self.health))
@@ -249,6 +250,13 @@ class Player(Entity):
 
         if mouse.left:
             self.gun.shoot()
+
+        if self.gun.weapon_type == 'sniper':
+            if mouse.right:
+                self.gun.scope_in()
+            else:
+                self.gun.scope_out()
+
         self.gun.update()
 
         if held_keys['4'] and search_destroy.sd_game:
@@ -414,6 +422,8 @@ class Player(Entity):
         self.head_hitbox.enabled = False
         if self.is_local and hasattr(self, 'crosshair'):
             self.crosshair.enabled = False
+        if self.is_local and hasattr(self, 'gun') and self.gun.scoped:
+            self.gun.scope_out()
         if self.has_bomb and search_destroy.sd_game:
             search_destroy.sd_game.drop_bomb(self.position)
             self.has_bomb = False
@@ -445,11 +455,14 @@ class Player(Entity):
         self._evasion_timer = 0.0
         if self.is_local:
             self.camera_recoil = 0.0
-        self.gun.reset()
+        if not self.is_local:
+            self.selected_weapon = random.choice(['ak47', 'sniper'])
+        self.gun.set_weapon(getattr(self, 'selected_weapon', 'ak47'))
         if self.bomb_indicator:
             self.bomb_indicator.text = ''
         if self.ammo_text:
-            self.ammo_text.text = f'{AMMO_CAPACITY} / {AMMO_CAPACITY}'
+            cap = self.gun._stats['ammo']
+            self.ammo_text.text = f'{cap} / {cap}'
             self.ammo_text.color = color.white
         if self.health_text:
             self.health_text.text = '100'
