@@ -97,6 +97,7 @@ class Player(Entity):
         self.gun = Gun(player=self)
 
         if self.is_local:
+            self.model = None  # hide own body mesh — camera sits inside model in first-person
             camera.parent = self
             camera.position = (0, 2, 0)
             camera.rotation = (0, 0, 0)
