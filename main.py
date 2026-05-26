@@ -211,38 +211,38 @@ Text(
     ignore_paused=True,
 )
 Text(
-    text='Search & Destroy  |  1v1',
+    text='SELECT GAME MODE',
     parent=_main_menu,
-    position=(0, 0.14),
+    position=(0, 0.12),
     origin=(0, 0),
-    scale=2,
+    scale=1.8,
     color=color.light_gray,
-    ignore_paused=True,
-)
-Text(
-    text='First to 5 rounds wins  •  Sides switch at halftime',
-    parent=_main_menu,
-    position=(0, 0.06),
-    origin=(0, 0),
-    scale=1.2,
-    color=color.rgb32(140, 140, 140),
     ignore_paused=True,
 )
 
 Button(
-    text='PLAY',
+    text='1v1  —  Search & Destroy',
     parent=_main_menu,
-    position=(0, -0.06),
-    scale=(0.30, 0.09),
+    position=(0, -0.02),
+    scale=(0.42, 0.09),
     color=color.azure,
     on_click=lambda: _start_game(),
     ignore_paused=True,
 )
 Button(
+    text='ZOMBIES',
+    parent=_main_menu,
+    position=(0, -0.15),
+    scale=(0.42, 0.09),
+    color=color.rgb32(80, 160, 80),
+    on_click=lambda: None,
+    ignore_paused=True,
+)
+Button(
     text='QUIT',
     parent=_main_menu,
-    position=(0, -0.19),
-    scale=(0.30, 0.09),
+    position=(0, -0.28),
+    scale=(0.42, 0.09),
     color=color.rgb32(60, 60, 60),
     on_click=application.quit,
     ignore_paused=True,
@@ -253,7 +253,7 @@ Text(
          'Space: jump   Ctrl: crouch   Shift: sprint\n'
          'R: reload   4: plant/defuse   Esc: pause',
     parent=_main_menu,
-    position=(0, -0.36),
+    position=(0, -0.42),
     origin=(0, 0),
     scale=1.1,
     color=color.rgb32(110, 110, 110),
