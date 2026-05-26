@@ -24,10 +24,6 @@ _ak47_btn        = None
 _sniper_btn      = None
 _round_loadout_active = False
 
-# Zombies objects — created only when zombies mode is chosen
-_zb_map_data     = None
-_zb_local_player = None
-
 
 # ── Main menu ─────────────────────────────────────────────────────────────────
 _main_menu = Entity(parent=camera.ui, enabled=True, ignore_paused=True)
@@ -196,24 +192,13 @@ def _select_weapon(weapon_type):
 
 # ── Zombies setup ─────────────────────────────────────────────────────────────
 def _launch_zombies():
-    global _mode, _game_started, _zb_map_data, _zb_local_player
+    global _mode, _game_started
 
     _mode = 'zombies'
     _hide_main_menu()
 
-    from zombies_map import create_zombies_map
-    from player import Player
-
-    _zb_map_data = create_zombies_map()
-
-    spawn = _zb_map_data['player_spawn']
-    _zb_local_player = Player(
-        team_color=color.azure,
-        spawn_point=(spawn.x, spawn.y, spawn.z),
-        is_local=True,
-        name='Player',
-    )
-    _zb_local_player.position = spawn
+    import zombies_mode
+    zombies_mode.start()
 
     application.paused = False
     mouse.locked = True
@@ -239,8 +224,8 @@ def input(key):
             else:
                 _toggle_pause()
     elif _mode == 'zombies':
-        if key == 'escape':
-            application.quit()
+        import zombies_mode
+        zombies_mode.handle_input(key)
 
 
 def update():
@@ -252,8 +237,8 @@ def update():
         _sd_scoreboard.update()
         _sd_game.update()
     elif _mode == 'zombies':
-        if _zb_local_player:
-            _zb_local_player.update()
+        import zombies_mode
+        zombies_mode.update()
 
 
 app.run()

@@ -130,17 +130,7 @@ def _slice1d(lo, hi, cuts):
 
 # Locked door barrier
 def _barrier(cx, y_fl, cz, w, h, d, cost):
-    e = _b((cx, y_fl + h/2, cz), (w, h, d), _BARRIER)
-    # Cost label
-    Text(
-        text=f'[{cost} pts]',
-        position=(cx, y_fl + h + 0.4, cz),
-        origin=(0, 0),
-        scale=1.2,
-        color=color.yellow,
-        world=True,
-        always_on_top=True,
-    )
+    e   = _b((cx, y_fl + h/2, cz), (w, h, d), _BARRIER)
     rec = {'entity': e, 'cost': cost, 'open': False}
     door_barriers.append(rec)
     return rec
