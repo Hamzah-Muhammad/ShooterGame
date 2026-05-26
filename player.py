@@ -208,8 +208,25 @@ class Player(Entity):
         if not self.on_ground:
             self.velocity_y += GRAVITY * time.dt
         self.y += self.velocity_y * time.dt
-        if self.y <= 1:
-            self.y = 1
+
+        # Raycast downward to find the actual surface below (stairs, upper floors, ground)
+        hit = raycast(
+            Vec3(self.x, self.y + 0.5, self.z),
+            Vec3(0, -1, 0),
+            distance=1.5,
+            ignore=[self, self.body_hitbox, self.head_hitbox, self.gun],
+        )
+        if hit.hit:
+            landing_y = hit.world_point.y + 1.0
+            # Only snap when falling/stationary — not while jumping upward
+            if self.y <= landing_y + 0.05 and self.velocity_y <= 0:
+                self.y = landing_y
+                self.velocity_y = 0
+                self.on_ground = True
+            else:
+                self.on_ground = False
+        elif self.y <= 1.0:
+            self.y = 1.0
             self.velocity_y = 0
             self.on_ground = True
         else:

@@ -160,12 +160,14 @@ def _build_ground(y):
     _slab(-36, y,  39, 48, 22, _WOOD)      # Rear Study      x:-60..-12 z:28..50
     _slab( 36, y,  39, 48, 22, _WOOD)      # Pantry          x:12..60   z:28..50
 
-    # === Ceilings — offset -0.31 below the floor slab above to prevent Z-fighting ===
+    # === Ceilings — offset -0.31 below the floor slab above to prevent Z-fighting.
+    # Staircase Hall ceiling is intentionally omitted — the shaft is open-height
+    # so the probe ray can reach step surfaces without hitting a ceiling mid-climb.
     cy = y + FH - 0.31
     _slab(  0, cy, -35, 32, 30, _CEIL)
     _slab(-38, cy, -33, 44, 34, _CEIL)
     _slab( 38, cy, -33, 44, 34, _CEIL)
-    _slab(  0, cy,  -2, 24, 36, _CEIL)
+    # _slab(  0, cy,  -2, 24, 36, _CEIL)  # Staircase Hall — omitted (open shaft)
     _slab(-36, cy,   6, 48, 44, _CEIL)
     _slab( 36, cy,   6, 48, 44, _CEIL)
     _slab(  0, cy,  28, 24, 24, _CEIL)
@@ -221,7 +223,7 @@ def _build_floor1(y):
     cy = y + FH - 0.31
     _slab(-38, cy, -33, 44, 34, _CEIL)
     _slab( 38, cy, -33, 44, 34, _CEIL)
-    _slab(  0, cy,  -2, 24, 36, _CEIL)
+    # _slab(  0, cy,  -2, 24, 36, _CEIL)  # Upper Landing — omitted (open shaft)
     _slab(-36, cy,   6, 48, 44, _CEIL)
     _slab( 36, cy,   6, 48, 44, _CEIL)
     _slab(  0, cy,  28, 24, 24, _CEIL)
@@ -270,7 +272,7 @@ def _build_floor2(y):
     cy = y + FH - 0.31
     _slab(-38, cy, -25, 44, 50, _CEIL)
     _slab( 38, cy, -25, 44, 50, _CEIL)
-    _slab(  0, cy,   0, 24, 32, _CEIL)
+    # _slab(  0, cy,   0, 24, 32, _CEIL)  # Central Hall — omitted (open shaft)
     _slab(  0, cy,  32, 80, 36, _CEIL)
 
     # Exterior walls
