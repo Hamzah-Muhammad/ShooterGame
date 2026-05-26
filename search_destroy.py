@@ -209,7 +209,7 @@ class SearchAndDestroyGame:
             destroy(self.round_over_text)
             self.round_over_text = None
 
-        if self.rounds_played % 2 == 0:
+        if self.rounds_played == self.round_limit - 1:
             self.attacking_team, self.defending_team = (
                 self.defending_team,
                 self.attacking_team,

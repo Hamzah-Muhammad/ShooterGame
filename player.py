@@ -92,6 +92,8 @@ class Player(Entity):
         self._evasion_timer = 0.0
         self._evasion_dir = Vec3(1, 0, 0)
         self._last_health = 100
+        self._had_los = False
+        self._reaction_timer = 0.0
 
         self.gun = Gun(player=self)
 
@@ -282,17 +284,25 @@ class Player(Entity):
             self.on_ground = False
 
     def _update_ai(self):
-        # Detect being hit — start evasion
+        # Hit detection → emergency evasion
         if self.health < self._last_health and self.health > 0:
             self._evasion_timer = random.uniform(0.4, 1.0)
             self._evasion_dir = self.right if random.random() > 0.5 else -self.right
         self._last_health = self.health
 
-        if self._evasion_timer > 0 and self._strafe_timer <= 0:
+        if self._evasion_timer > 0:
             self._evasion_timer -= time.dt
-            self.position += self._evasion_dir * self.speed * time.dt
-            self.is_moving = True
+            probe = raycast(
+                self.world_position + Vec3(0, 1, 0),
+                self._evasion_dir,
+                distance=1.5,
+                ignore=[self, self.body_hitbox, self.head_hitbox],
+            )
+            if not probe.hit:
+                self.position += self._evasion_dir * self.speed * time.dt
+                self.is_moving = True
 
+        # Bomb objectives override general engagement
         if search_destroy.sd_game:
             sd = search_destroy.sd_game
             is_attacker = self.team_color == sd.attacking_team.color
@@ -328,13 +338,57 @@ class Player(Entity):
         if dist > 0:
             self.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
 
-        if dist > 3:
-            self.is_moving = True
-            self._ai_move_toward(nearest.position)
-        else:
-            self.is_moving = False
+        has_los = dist < 25 and self._ai_has_los(nearest)
 
-        if dist < 20 and self._ai_has_los(nearest):
+        # Reaction delay: start timer the moment LOS is re-acquired
+        if has_los and not self._had_los:
+            self._reaction_timer = random.uniform(0.12, 0.30)
+        self._had_los = has_los
+        if self._reaction_timer > 0:
+            self._reaction_timer -= time.dt
+
+        # Tactical positioning — preferred engagement range 8–18 units
+        _CLOSE = 8
+        _FAR = 18
+        if dist > _FAR:
+            self._ai_move_toward(nearest.position)
+        elif dist < _CLOSE:
+            # Too close — back away while still facing enemy
+            away = Vec3(-direction.x, 0, -direction.z)
+            if away.length() > 0:
+                away = away.normalized()
+            probe = raycast(
+                self.world_position + Vec3(0, 1, 0),
+                away,
+                distance=1.5,
+                ignore=[self, self.body_hitbox, self.head_hitbox],
+            )
+            if not probe.hit:
+                self.position += away * self.speed * time.dt
+                self.is_moving = True
+            else:
+                self.is_moving = False
+        else:
+            # In preferred range — lateral strafe
+            self._strafe_timer -= time.dt
+            if self._strafe_timer <= 0:
+                self._avoid_dir = self.right if random.random() > 0.5 else -self.right
+                self._strafe_timer = random.uniform(0.5, 1.2)
+            strafe_probe = raycast(
+                self.world_position + Vec3(0, 1, 0),
+                self._avoid_dir,
+                distance=1.5,
+                ignore=[self, self.body_hitbox, self.head_hitbox],
+            )
+            if not strafe_probe.hit:
+                self.position += self._avoid_dir * self.speed * time.dt
+                self.is_moving = True
+            else:
+                self._avoid_dir = -self._avoid_dir
+                self._strafe_timer = 0
+                self.is_moving = False
+
+        if has_los and self._reaction_timer <= 0:
             self.gun.shoot()
 
         self.gun.update()
@@ -488,6 +542,8 @@ class Player(Entity):
         self.on_ground = True
         self._last_health = 100
         self._evasion_timer = 0.0
+        self._had_los = False
+        self._reaction_timer = 0.0
         if self.is_local:
             self.camera_recoil = 0.0
         if not self.is_local:

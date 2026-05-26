@@ -55,14 +55,15 @@ class Scoreboard(Entity):
             red_score  = sum(p.kills for p in self.team_manager.red_team.players)
             self.round_text.text = ''
 
-        self.team1_text.text = f'Blue  {blue_score}'
-        self.team2_text.text = f'Red   {red_score}'
-
-        # Attacking team label turns red (pressure indicator)
         if search_destroy.sd_game:
-            if search_destroy.sd_game.attacking_team == self.team_manager.blue_team:
-                self.team1_text.color = color.red
-                self.team2_text.color = color.azure
-            else:
-                self.team1_text.color = color.azure
-                self.team2_text.color = color.red
+            sd = search_destroy.sd_game
+            blue_role = 'ATK' if sd.attacking_team == self.team_manager.blue_team else 'DEF'
+            red_role  = 'ATK' if sd.attacking_team == self.team_manager.red_team  else 'DEF'
+            self.team1_text.text = f'Blue [{blue_role}]  {blue_score}'
+            self.team2_text.text = f'Red  [{red_role}]   {red_score}'
+        else:
+            self.team1_text.text = f'Blue  {blue_score}'
+            self.team2_text.text = f'Red   {red_score}'
+
+        self.team1_text.color = color.azure
+        self.team2_text.color = color.red

@@ -185,18 +185,103 @@ def select_weapon(weapon_type):
         toggle_loadout(False)
 
 
+# ── Search & Destroy ──────────────────────────────────────────────────────────
+search_destroy.sd_game = SearchAndDestroyGame(team_manager)
+search_destroy.sd_game.on_round_start = _open_round_loadout
+
+
+# ── Main menu ─────────────────────────────────────────────────────────────────
+_game_started = False
+_main_menu = Entity(parent=camera.ui, enabled=True, ignore_paused=True)
+
+Entity(
+    model='quad',
+    parent=_main_menu,
+    scale=(2, 2),
+    color=color.rgba32(0, 0, 0, 240),
+    ignore_paused=True,
+)
+Text(
+    text='SHOOTER',
+    parent=_main_menu,
+    position=(0, 0.28),
+    origin=(0, 0),
+    scale=7,
+    color=color.white,
+    ignore_paused=True,
+)
+Text(
+    text='Search & Destroy  |  1v1',
+    parent=_main_menu,
+    position=(0, 0.14),
+    origin=(0, 0),
+    scale=2,
+    color=color.light_gray,
+    ignore_paused=True,
+)
+Text(
+    text='First to 5 rounds wins  •  Sides switch at halftime',
+    parent=_main_menu,
+    position=(0, 0.06),
+    origin=(0, 0),
+    scale=1.2,
+    color=color.rgb32(140, 140, 140),
+    ignore_paused=True,
+)
+
+Button(
+    text='PLAY',
+    parent=_main_menu,
+    position=(0, -0.06),
+    scale=(0.30, 0.09),
+    color=color.azure,
+    on_click=lambda: _start_game(),
+    ignore_paused=True,
+)
+Button(
+    text='QUIT',
+    parent=_main_menu,
+    position=(0, -0.19),
+    scale=(0.30, 0.09),
+    color=color.rgb32(60, 60, 60),
+    on_click=application.quit,
+    ignore_paused=True,
+)
+
+Text(
+    text='WASD: move   Mouse: aim   LMB: shoot   RMB: scope\n'
+         'Space: jump   Ctrl: crouch   Shift: sprint\n'
+         'R: reload   4: plant/defuse   Esc: pause',
+    parent=_main_menu,
+    position=(0, -0.36),
+    origin=(0, 0),
+    scale=1.1,
+    color=color.rgb32(110, 110, 110),
+    ignore_paused=True,
+)
+
+application.paused = True
+mouse.locked = False
+
+
+def _start_game():
+    global _main_menu, _game_started
+    _game_started = True
+    if _main_menu:
+        destroy(_main_menu)
+        _main_menu = None
+    application.paused = False
+    search_destroy.sd_game.start_round()
+
+
 def input(key):
+    if not _game_started:
+        return
     if key == 'escape':
         if loadout_menu.enabled:
             toggle_loadout(False)
         else:
             toggle_menu()
-
-
-# ── Search & Destroy ──────────────────────────────────────────────────────────
-search_destroy.sd_game = SearchAndDestroyGame(team_manager)
-search_destroy.sd_game.on_round_start = _open_round_loadout
-search_destroy.sd_game.start_round()
 
 
 def update():
