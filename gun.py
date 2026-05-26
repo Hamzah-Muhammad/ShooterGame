@@ -37,6 +37,10 @@ def _ray_aabb(origin, direction, box_min, box_max):
     return t_min
 
 
+# Populated by zombies_mode when in zombies mode; gun checks this when
+# team_manager is None so S&D and Zombies share the same shoot() path.
+zombie_targets = []
+
 WEAPON_STATS = {
     'ak47': {
         'damage':          AK47_DAMAGE,
@@ -224,28 +228,38 @@ class Gun(Entity):
 
         # ── Step 1: AABB check against each enemy — bypasses Ursina's entity
         #   lookup so hit registration doesn't depend on Panda3D collision quirks.
-        best_target = None
+        best_target  = None
         best_is_head = False
-        best_dist = 499.0
+        best_dist    = 499.0
 
-        opposing = self.player.team_manager.get_opposing_players(self.player.team_color)
-        for candidate in opposing:
+        tm = self.player.team_manager
+        if tm is not None:
+            candidates = tm.get_opposing_players(self.player.team_color)
+        else:
+            candidates = [z for z in zombie_targets if not getattr(z, 'dead', True)]
+
+        for candidate in candidates:
             if getattr(candidate, 'dead', True):
                 continue
             for is_head, bounds in [(False, candidate.get_body_bounds()),
                                      (True,  candidate.get_head_bounds())]:
                 d = _ray_aabb(origin, direction, bounds[0], bounds[1])
                 if d is not None and 0 <= d < best_dist:
-                    best_dist = d
-                    best_target = candidate
+                    best_dist    = d
+                    best_target  = candidate
                     best_is_head = is_head
 
         # ── Step 2: wall obstruction — raycast against map geometry only.
         #   We only need ray.hit / ray.distance here, not ray.entity.
-        all_player_nodes = []
-        for p in self.player.team_manager.all_players:
-            all_player_nodes += [p, p.body_hitbox, p.head_hitbox]
-        all_player_nodes.append(self)
+        if tm is not None:
+            all_player_nodes = []
+            for p in tm.all_players:
+                all_player_nodes += [p, p.body_hitbox, p.head_hitbox]
+            all_player_nodes.append(self)
+        else:
+            # Zombies mode: ignore all zombie entities so wall check doesn't
+            # mistake a zombie body for a wall (AABB already handled hits above).
+            all_player_nodes = list(zombie_targets) + [self]
 
         wall = raycast(origin, direction,
                        distance=best_dist if best_target else 499,
